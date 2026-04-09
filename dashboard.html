@@ -124,8 +124,9 @@ const WORKER_URL = 'https://pve-api.YOUR-WORKER-SUBDOMAIN.workers.dev';
     <a href="index.html" class="sn-home">Home</a>
     <a href="iron-arena.html" class="sn-arena">⚔ Iron Arena</a>
     <a href="reap-what-you-sow.html" class="sn-reap">🌾 Reap What You Sow</a>
-    <a href="trade-together2.html" class="sn-trade">📊 Trade Together</a>
+    <a href="trade-together.html" class="sn-trade">📊 Trade Together</a>
     <a href="dashboard.html" class="sn-dashboard sn-active">◈ Dashboard</a>
+    <a href="2nd_Tournament.html" class="sn-tourney">🏆 2nd Tournament</a>
   </div>
 </nav>
 
@@ -179,7 +180,7 @@ const WORKER_URL = 'https://pve-api.YOUR-WORKER-SUBDOMAIN.workers.dev';
     <div class="app-panel">
       <div class="app-panel-header">
         <span class="app-panel-title gold">🌾 Reap What You Sow</span>
-        <a class="app-panel-link" href="reap-what-you-sow-v3.html">Open →</a>
+        <a class="app-panel-link" href="reap-what-you-sow.html">Open →</a>
       </div>
       <div class="app-panel-body" id="panel-reap">
         <span class="app-stat-lbl stat-loading">Loading…</span>
@@ -190,7 +191,7 @@ const WORKER_URL = 'https://pve-api.YOUR-WORKER-SUBDOMAIN.workers.dev';
     <div class="app-panel">
       <div class="app-panel-header">
         <span class="app-panel-title blue">📊 Trade Together</span>
-        <a class="app-panel-link" href="trade-together2.html">Trade →</a>
+        <a class="app-panel-link" href="trade-together.html">Trade →</a>
       </div>
       <div class="app-panel-body" id="panel-trade">
         <span class="app-stat-lbl stat-loading">Loading…</span>
@@ -658,6 +659,14 @@ function fmt(n, d=2) {
   return parseFloat(n).toLocaleString(undefined, { maximumFractionDigits: d });
 }
 
+function fmtEth(n) {
+  if (n == null || isNaN(n)) return '—';
+  const v = parseFloat(n);
+  if (v === 0) return '0';
+  if (v < 0.0001) return v.toFixed(9).replace(/0+$/, '');
+  return v.toPrecision(4).replace(/\.?0+$/, '');
+}
+
 function statBlock(label, val, cls='') {
   return `<div class="app-stat">
     <span class="app-stat-lbl">${label}</span>
@@ -682,7 +691,7 @@ async function loadDashboard(profile) {
 
   document.getElementById('total-xp').textContent    = fmt(arenaResult.xp, 0);
   document.getElementById('total-pve').textContent   = fmt(reapResult.pve, 2);
-  document.getElementById('total-eth').textContent   = fmt(reapResult.eth, 4) + ' ETH';
+  document.getElementById('total-eth').textContent   = fmtEth(reapResult.eth) + ' ETH';
   document.getElementById('total-trade').textContent = fmt(tradeResult.val) + ' PvE';
 }
 
@@ -738,7 +747,7 @@ async function loadReapStats(profile) {
       statBlock('Wallet', (profile.skin||'🧙') + ' ' + (wallet.name || name)) +
       statBlock('$PvE Balance', fmt(wallet.balance || 0), 'gold') +
       statBlock('$PvE Locked',  fmt(wallet.locked  || 0), 'gold') +
-      statBlock('$ETH Earned',  fmt(eth, 4), 'green') +
+      statBlock('$ETH Earned',  fmtEth(eth), 'green') +
       statBlock('Total Vol',    fmt(st.totalVol || 0, 2), 'gold') +
       statBlock('Rewards',      fmt(st.totalRewards || 0, 2));
     return { pve, eth };
