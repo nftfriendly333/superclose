@@ -488,6 +488,17 @@
     <div class="gate-cd-msg" id="cd-msg" style="min-height:22px"></div>
     <hr class="gate-divider">
     <div class="gate-reg-note">Connect your Ethereum wallet to enter the tournament.</div>
+    <div style="margin-bottom:12px;">
+      <input id="gate-name-input" type="text" maxlength="20" placeholder="Display name (optional)"
+        style="width:100%;background:rgba(0,0,0,0.35);border:1px solid rgba(201,168,76,0.3);color:#f0e8d8;
+               font-family:'Cinzel',serif;font-size:0.82rem;padding:10px 12px;border-radius:6px;
+               outline:none;letter-spacing:0.05em;text-align:center;box-sizing:border-box;"
+        oninput="this.value=this.value.replace(/[^a-zA-Z0-9_ ]/g,'')"
+        onkeydown="if(event.key==='Enter')connectWallet()"/>
+      <div style="font-size:0.6rem;color:rgba(201,168,76,0.4);margin-top:5px;letter-spacing:0.08em;text-align:center;">
+        Letters, numbers, spaces only · 20 chars max
+      </div>
+    </div>
     <div class="gate-btn-row" style="flex-direction:column;gap:10px">
       <button class="gate-btn gate-btn-primary" id="btn-connect-wallet" onclick="connectWallet()">&#128274; Connect Wallet</button>
       <div id="gate-wallet-status" style="font-size:.68rem;color:var(--text-dim);text-align:center;min-height:18px;letter-spacing:.5px"></div>
@@ -523,6 +534,10 @@
   </div>
   <div id="save-indicator" style="font-size:.58rem;color:rgba(201,169,110,.4);margin-top:3px;letter-spacing:1px">💾 Auto-saving</div>
   <div id="wallet-addr-display" style="font-size:.56rem;color:rgba(201,169,110,.35);margin-top:1px;font-family:monospace;letter-spacing:.5px"></div>
+  <div style="margin-top:4px;display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap;">
+    <span id="tt-name-display" style="font-size:.65rem;color:rgba(201,169,110,.7);letter-spacing:.08em;font-family:'Cinzel',serif;"></span>
+    <button onclick="openRenameModal()" style="font-size:.55rem;color:rgba(201,169,110,.5);background:transparent;border:1px solid rgba(201,169,110,.2);border-radius:4px;padding:2px 8px;cursor:pointer;font-family:'Cinzel',serif;letter-spacing:.06em;transition:all .15s;" onmouseover="this.style.borderColor='rgba(201,169,110,.5)';this.style.color='rgba(201,169,110,.9)'" onmouseout="this.style.borderColor='rgba(201,169,110,.2)';this.style.color='rgba(201,169,110,.5)'">✎ Rename</button>
+  </div>
 </div>
 
 <div class="tabs">
@@ -758,6 +773,25 @@
       <button class="modal-btn-short" id="modal-btn-short" onclick="openTrade('short')">▼ Short<br><span style="font-size:.65rem;opacity:.8">Profit if price falls</span></button>
     </div>
     <button class="modal-cancel" onclick="closeModal()">Cancel</button>
+  </div>
+</div>
+
+<!-- RENAME MODAL -->
+<div id="rename-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:9999;align-items:center;justify-content:center;padding:16px;">
+  <div style="background:#1a1008;border:1px solid rgba(201,168,76,0.35);border-radius:10px;width:100%;max-width:320px;padding:28px 24px;font-family:'Cinzel',serif;text-align:center;">
+    <div style="font-size:1.1rem;color:#c9a84c;letter-spacing:.15em;margin-bottom:6px;">✎ CHANGE NAME</div>
+    <div style="font-size:.65rem;color:rgba(201,168,76,.45);letter-spacing:.08em;margin-bottom:18px;">Shown on leaderboard &amp; live trades</div>
+    <input id="rename-input" type="text" maxlength="20" placeholder="Enter display name…"
+      style="width:100%;background:rgba(0,0,0,0.4);border:1px solid rgba(201,168,76,0.35);color:#f0e8d8;
+             font-family:'Cinzel',serif;font-size:.88rem;padding:11px 14px;border-radius:6px;
+             outline:none;letter-spacing:.05em;text-align:center;box-sizing:border-box;margin-bottom:6px;"
+      oninput="this.value=this.value.replace(/[^a-zA-Z0-9_ ]/g,'')"
+      onkeydown="if(event.key==='Enter')confirmRename();if(event.key==='Escape')closeRenameModal()"/>
+    <div style="font-size:.58rem;color:rgba(201,168,76,.35);margin-bottom:18px;letter-spacing:.06em;">Letters, numbers, spaces · 20 chars max</div>
+    <div style="display:flex;gap:10px;">
+      <button onclick="closeRenameModal()" style="flex:1;background:transparent;border:1px solid rgba(255,255,255,.12);color:rgba(255,255,255,.4);font-family:'Cinzel',serif;font-size:.75rem;padding:10px;border-radius:6px;cursor:pointer;letter-spacing:.08em;">CANCEL</button>
+      <button onclick="confirmRename()" style="flex:1;background:linear-gradient(135deg,rgba(201,168,76,.15),rgba(201,168,76,.06));border:1px solid rgba(201,168,76,.5);color:#c9a84c;font-family:'Cinzel',serif;font-size:.75rem;padding:10px;border-radius:6px;cursor:pointer;letter-spacing:.08em;">SAVE NAME</button>
+    </div>
   </div>
 </div>
 
@@ -2583,10 +2617,55 @@ function forceTournamentClose(){
 function fmtWallet(a){if(!a)return '';if(a.length<=12)return a;return a.slice(0,6)+'\u2026'+a.slice(-4);}
 function safeKey(s){return s.replace(/[^a-zA-Z0-9_-]/g,'_');}
 
+// ── Display name — stored per wallet in localStorage ──────────────
+function _nameKey(addr){ return 'tt-name:' + (addr||'').toLowerCase(); }
+
+function getSavedName(addr){
+  try { return localStorage.getItem(_nameKey(addr)) || ''; } catch(e){ return ''; }
+}
+function setSavedName(addr, name){
+  try { localStorage.setItem(_nameKey(addr), name); } catch(e){}
+}
+
 // Derive a display username from wallet address: "0x1234…abcd"
 function walletToUsername(addr){
   if(!addr)return 'Trader';
   return addr.slice(0,6)+'_'+addr.slice(-4);
+}
+
+function _resolveUsername(addr){
+  var saved = getSavedName(addr);
+  return saved || walletToUsername(addr);
+}
+
+function _updateNameDisplay(){
+  var el = document.getElementById('tt-name-display');
+  if(el) el.textContent = myUsername || '';
+}
+
+// ── Rename modal ──────────────────────────────────────────────────
+function openRenameModal(){
+  var overlay = document.getElementById('rename-overlay');
+  var input   = document.getElementById('rename-input');
+  if(!overlay) return;
+  overlay.style.display = 'flex';
+  if(input){ input.value = myUsername || ''; input.focus(); input.select(); }
+}
+function closeRenameModal(){
+  var overlay = document.getElementById('rename-overlay');
+  if(overlay) overlay.style.display = 'none';
+}
+function confirmRename(){
+  var input = document.getElementById('rename-input');
+  var name  = (input ? input.value.trim() : '').replace(/[^a-zA-Z0-9_ ]/g,'').trim();
+  if(!name){ showToast('Enter a name first','tp-loss'); return; }
+  myUsername = name;
+  setSavedName(myWalletAddress, name);
+  sessionStorage.setItem('tt_username', name);
+  _updateNameDisplay();
+  closeRenameModal();
+  showToast('Name updated to: ' + name, 'tp-hit');
+  saveState(); // push new name to leaderboard
 }
 
 // ── Web3Modal connect (any wallet, any chain) ─────────────────
@@ -2642,7 +2721,16 @@ async function _handleTTConnect(addr){
   var btn = document.getElementById('btn-connect-wallet');
   var status = document.getElementById('gate-wallet-status');
   myWalletAddress = addr;
-  myUsername = walletToUsername(addr);
+
+  // Priority: gate input → localStorage saved name → wallet-derived default
+  var gateInput = (document.getElementById('gate-name-input')?.value || '').replace(/[^a-zA-Z0-9_ ]/g,'').trim();
+  if(gateInput){
+    myUsername = gateInput;
+    setSavedName(addr, gateInput);
+  } else {
+    myUsername = _resolveUsername(addr);
+  }
+
   sessionStorage.setItem('tt_username', myUsername);
   sessionStorage.setItem('tt_wallet', myWalletAddress);
   // Write to shared ecosystem key
@@ -2705,6 +2793,7 @@ function enterGame(){
     window.addEventListener('resize', function(){ renderMarket(); });
     var a=document.getElementById('wallet-addr-display');
     if(a&&myWalletAddress)a.textContent=fmtWallet(myWalletAddress);
+    _updateNameDisplay();
     if(!restored) showToast('Welcome, '+myUsername+'! 10,000 PvE ready.','tp-hit');
     else showToast('Welcome back, '+myUsername+'!','tp-hit');
   });
@@ -2926,7 +3015,7 @@ window.addEventListener('load', function(){
   if(_sharedWallet && _sharedWallet.address){
     // Already connected via another PvE app — boot straight in
     myWalletAddress = _sharedWallet.address;
-    myUsername = walletToUsername(myWalletAddress);
+    myUsername = _resolveUsername(myWalletAddress);
     sessionStorage.setItem('tt_username', myUsername);
     sessionStorage.setItem('tt_wallet', myWalletAddress);
     var msg = document.getElementById('cd-msg');
