@@ -4321,14 +4321,28 @@ PveAuth.onLogin(async (profile) => {
   const newAddr = (profile.address || '').toLowerCase();
   if (!newAddr) return;
 
+  // Check both shopState AND the localStorage save's wallet address.
+  // On page refresh shopState.walletAddress is empty, so we must also
+  // check the saved wallet to avoid incorrectly treating a reconnect as a switch.
   const currentAddr = (shopState.walletAddress || '').toLowerCase();
-  // Same wallet reconnecting — just update wallet display, don't reset anything
-  if (newAddr === currentAddr) {
+  const savedAddr   = (() => {
+    try {
+      const raw = localStorage.getItem(LS_ARENA_KEY);
+      if (!raw) return '';
+      const d = JSON.parse(raw);
+      return (d?.shop?.walletAddress || '').toLowerCase();
+    } catch(e) { return ''; }
+  })();
+
+  const isSameWallet = newAddr === currentAddr || newAddr === savedAddr;
+
+  if (isSameWallet) {
+    // Same wallet reconnecting after refresh — just wire up storage, never reset
     shopState.walletAddress = profile.address || '';
     renderWalletDisplay();
     updateFightButtonWalletGate();
     if (typeof PveStorage !== 'undefined') PveStorage.install(newAddr);
-    // Background sync current state to cloud
+    // Background sync to cloud
     const raw = localStorage.getItem(LS_ARENA_KEY);
     if (raw && window.storage && !window.storage._isStub) {
       window.storage.set('arena-save:' + newAddr, raw, false)
@@ -4338,11 +4352,11 @@ PveAuth.onLogin(async (profile) => {
     return;
   }
 
-  // Different wallet — save current wallet's progress first, then switch
+  // Genuinely different wallet — save current wallet's progress, then switch
   showSaveToast('🔄 Wallet switched — saving...', '#c9a84c');
-  saveGame(); // saves current wallet's state to localStorage + cloud
+  saveGame();
 
-  // Reset identity and state for new wallet
+  // Reset state for new wallet
   lbMyKey = null;
   shopState.walletAddress = profile.address || '';
   Object.assign(state.skills,      { stamina:1, attack:1, defense:1, crit:1 });
@@ -4356,10 +4370,9 @@ PveAuth.onLogin(async (profile) => {
   potionState.miss.owned   = false; potionState.miss.activeThisFight   = false;
   guildState.myGuildCode = null; guildState.myGuildName = null; guildState.isLeader = false;
 
-  // Install new wallet's storage
   if (typeof PveStorage !== 'undefined') PveStorage.install(newAddr);
 
-  // Try to load new wallet's save from Firebase (cloud has their save, not localStorage)
+  // Load new wallet's save from Firebase
   let switched = false;
   if (window.storage && !window.storage._isStub) {
     try {
@@ -4367,23 +4380,21 @@ PveAuth.onLogin(async (profile) => {
       if (r) {
         const data = JSON.parse(r.value);
         _applyLoadedData(data);
-        // Write to localStorage under new wallet's context
         localStorage.setItem(LS_ARENA_KEY, r.value);
         switched = true;
       }
     } catch(e) {}
   }
 
-  // Reset DOM
   if (!switched) {
-    const combatantNameEl = document.querySelector('.combatant-name');
-    if (combatantNameEl) combatantNameEl.textContent = 'THE WARRIOR';
-    document.getElementById('wave-num').textContent = '1';
-    document.getElementById('enemy-count').textContent = '0';
-    document.getElementById('btn-fight').textContent = '⚔ ENTER THE ARENA';
-    document.getElementById('player-sprite').textContent = '🧙';
-    // Clear localStorage for fresh start
+    // New wallet with no save — clear localStorage and reset DOM
     localStorage.removeItem(LS_ARENA_KEY);
+    const nameEl = document.querySelector('.combatant-name');
+    if (nameEl) nameEl.textContent = 'THE WARRIOR';
+    document.getElementById('wave-num').textContent    = '1';
+    document.getElementById('enemy-count').textContent = '0';
+    document.getElementById('btn-fight').textContent   = '⚔ ENTER THE ARENA';
+    document.getElementById('player-sprite').textContent = '🧙';
   }
 
   renderSkills();
