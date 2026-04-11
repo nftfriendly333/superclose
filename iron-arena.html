@@ -3559,17 +3559,25 @@ function closeLeaderboard() {
 // SAVE / LOAD — Firebase only, keyed to wallet address
 // ============================================================
 
+// ── Local save helpers — instant backup regardless of wallet state ──
+const LS_ARENA_KEY = 'iron-arena-local-save';
+
+function _lsSave(data) {
+  try { localStorage.setItem(LS_ARENA_KEY, JSON.stringify(data)); } catch(e) {}
+}
+function _lsLoad() {
+  try {
+    const raw = localStorage.getItem(LS_ARENA_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch(e) { return null; }
+}
+
 async function _arenaStorageKey() {
   const p = PveAuth.getProfile();
   return p ? 'arena-save:' + (p.address || '').toLowerCase() : null;
 }
 
 async function saveGame() {
-  const key = await _arenaStorageKey();
-  if (!key || !window.storage) {
-    showSaveToast('⚠ Connect wallet to save', '#e74c3c');
-    return;
-  }
   const data = {
     skills:       state.skills,
     skillClicks:  state.skillClicks,
@@ -3595,6 +3603,20 @@ async function saveGame() {
       missOwned:   potionState.miss.owned,
     }
   };
+
+  // Layer 1: localStorage — always save immediately, no wallet needed
+  _lsSave(data);
+
+  // Layer 2: Firebase via window.storage — wallet-keyed cloud save
+  const key = await _arenaStorageKey();
+  if (!key || !window.storage || window.storage._isStub) {
+    // No wallet yet — local save is the only copy for now
+    // Don't show error toast during normal gameplay before wallet connects
+    if (shopState.walletAddress) {
+      showSaveToast('⚠ Connect wallet to sync to cloud', '#c9a84c');
+    }
+    return;
+  }
   try {
     console.log('[Iron Arena] saveGame: writing to', key);
     await window.storage.set(key, JSON.stringify(data), false);
@@ -3602,79 +3624,98 @@ async function saveGame() {
     showSaveToast('✔ Progress saved!', '#27ae60');
     submitLeaderboardScore();
   } catch(e) {
-    showSaveToast('⚠ Save failed', '#e74c3c');
+    showSaveToast('⚠ Cloud save failed — progress kept locally', '#c9a84c');
   }
 }
 
 async function loadGame() {
   try {
     const key = await _arenaStorageKey();
-    if (!key || !window.storage) {
-      console.warn('[Iron Arena] loadGame: no key or storage — wallet connected?', { key, storage: !!window.storage });
-      return false;
-    }
-    console.log('[Iron Arena] loadGame: fetching', key);
-    const r = await window.storage.get(key, false);
-    if (!r) {
-      console.log('[Iron Arena] loadGame: no save found for this wallet (fresh start)');
-      return false;
-    }
-    console.log('[Iron Arena] loadGame: save found, restoring...');
-    const data = JSON.parse(r.value);
 
-    // Restore state
-    Object.assign(state.skills,      data.skills      || {});
-    Object.assign(state.skillClicks, data.skillClicks || {});
-    state.totalXP          = data.totalXP          || 0;
-    state.lifetimeXP       = data.lifetimeXP       || state.totalXP; // fallback to totalXP for existing saves
-    state.enemiesDefeated  = data.enemiesDefeated  || 0;
-    state.wave             = data.wave             || 1;
-
-    // Restore shop
-    if (data.shop) {
-      shopState.heroName          = data.shop.heroName          || '';
-      shopState.nameChangeCount   = data.shop.nameChangeCount   || 0;
-      shopState.equippedSkin      = data.shop.equippedSkin      || 0;
-      shopState.ownedSkins        = data.shop.ownedSkins        || [0];
-      shopState.oneStrikeUnlocked = data.shop.oneStrikeUnlocked || false;
-      shopState.walletAddress     = data.shop.walletAddress     || '';
+    // Layer 2: Firebase (most authoritative when wallet is connected)
+    if (key && window.storage && !window.storage._isStub) {
+      console.log('[Iron Arena] loadGame: fetching from Firebase', key);
+      const r = await window.storage.get(key, false);
+      if (r) {
+        console.log('[Iron Arena] loadGame: Firebase save found, restoring...');
+        const data = JSON.parse(r.value);
+        _applyLoadedData(data);
+        _lsSave(data); // keep local in sync
+        return true;
+      }
+      console.log('[Iron Arena] loadGame: no Firebase save — checking local backup');
     }
 
-    // Apply hero name
-    if (shopState.heroName) {
-      const nameEl = document.querySelector('.combatant-name');
-      if (nameEl) nameEl.textContent = shopState.heroName.toUpperCase();
-      document.getElementById('name-cost-label').textContent = 'Rename costs 10 XP';
+    // Layer 1: localStorage fallback
+    const local = _lsLoad();
+    if (local) {
+      console.log('[Iron Arena] loadGame: restoring from localStorage backup');
+      _applyLoadedData(local);
+      return true;
     }
 
-    // Apply equipped skin
-    if (shopState.equippedSkin > 0) {
-      document.getElementById('player-sprite').textContent = SKINS[shopState.equippedSkin].emoji;
-    }
-
-    // Restore guild membership
-    if (data.guild?.code) {
-      guildState.myGuildCode = data.guild.code;
-      guildState.myGuildName = data.guild.name;
-      guildState.isLeader    = data.guild.isLeader || false;
-      saveGuildLocally();
-    }
-    if (data.potions) {
-      potionState.poison.owned = data.potions.poisonOwned || false;
-      potionState.miss.owned   = data.potions.missOwned   || false;
-    }
-
-    // Update wave / enemy count display
-    document.getElementById('wave-num').textContent = state.wave;
-    document.getElementById('enemy-count').textContent = state.enemiesDefeated;
-    document.getElementById('btn-fight').textContent = state.wave > 1
-      ? `⚔ CHALLENGE WAVE ${state.wave}` : '⚔ ENTER THE ARENA';
-
-    return true;
+    console.log('[Iron Arena] loadGame: no save found — fresh start');
+    return false;
   } catch(e) {
     console.warn('Load failed:', e);
+    // Last resort: try localStorage
+    try {
+      const local = _lsLoad();
+      if (local) { _applyLoadedData(local); return true; }
+    } catch(e2) {}
     return false;
   }
+}
+
+function _applyLoadedData(data) {
+  // Restore state
+  Object.assign(state.skills,      data.skills      || {});
+  Object.assign(state.skillClicks, data.skillClicks || {});
+  state.totalXP          = data.totalXP          || 0;
+  state.lifetimeXP       = data.lifetimeXP       || state.totalXP;
+  state.enemiesDefeated  = data.enemiesDefeated  || 0;
+  state.wave             = data.wave             || 1;
+
+  // Restore shop
+  if (data.shop) {
+    shopState.heroName          = data.shop.heroName          || '';
+    shopState.nameChangeCount   = data.shop.nameChangeCount   || 0;
+    shopState.equippedSkin      = data.shop.equippedSkin      || 0;
+    shopState.ownedSkins        = data.shop.ownedSkins        || [0];
+    shopState.oneStrikeUnlocked = data.shop.oneStrikeUnlocked || false;
+    shopState.walletAddress     = data.shop.walletAddress     || '';
+  }
+
+  // Apply hero name
+  if (shopState.heroName) {
+    const nameEl = document.querySelector('.combatant-name');
+    if (nameEl) nameEl.textContent = shopState.heroName.toUpperCase();
+    const costEl = document.getElementById('name-cost-label');
+    if (costEl) costEl.textContent = 'Rename costs 10 XP';
+  }
+
+  // Apply equipped skin
+  if (shopState.equippedSkin > 0) {
+    document.getElementById('player-sprite').textContent = SKINS[shopState.equippedSkin].emoji;
+  }
+
+  // Restore guild membership
+  if (data.guild?.code) {
+    guildState.myGuildCode = data.guild.code;
+    guildState.myGuildName = data.guild.name;
+    guildState.isLeader    = data.guild.isLeader || false;
+    saveGuildLocally();
+  }
+  if (data.potions) {
+    potionState.poison.owned = data.potions.poisonOwned || false;
+    potionState.miss.owned   = data.potions.missOwned   || false;
+  }
+
+  // Update wave / enemy count display
+  document.getElementById('wave-num').textContent = state.wave;
+  document.getElementById('enemy-count').textContent = state.enemiesDefeated;
+  document.getElementById('btn-fight').textContent = state.wave > 1
+    ? `⚔ CHALLENGE WAVE ${state.wave}` : '⚔ ENTER THE ARENA';
 }
 
 function deleteSave() {
@@ -4254,13 +4295,29 @@ window.PveStorage = PveStorage;
 
 
 
-// Phase 1: Render game immediately so it's playable right away
+// Phase 1: Render game immediately — also restore localStorage backup right away
+// so progress is never lost on refresh even before wallet re-connects
 (function() {
   renderSkills();
   resetPlayerStats();
   updateXPDisplay();
   renderSkinGrid();
   updateFightButtonWalletGate();
+
+  // Restore localStorage immediately — no wallet needed
+  const local = _lsLoad();
+  if (local) {
+    try {
+      _applyLoadedData(local);
+      renderSkills();
+      resetPlayerStats();
+      updateXPDisplay();
+      renderSkinGrid();
+      showSaveToast('⚔ Local progress restored', '#7a5c1e');
+    } catch(e) {
+      console.warn('[Iron Arena] Phase 1 local restore failed:', e);
+    }
+  }
 })();
 
 // Phase 2: Auth + cloud save in background — doesn't block gameplay
@@ -4272,7 +4329,6 @@ window.PveStorage = PveStorage;
     // Set uid from profile
     if (profile.uid || profile.address) {
       shopState.walletAddress = profile.address || profile.uid || '';
-      // Explicitly install storage under wallet address BEFORE loading save
       const storageKey = (profile.address || '').toLowerCase() || profile.uid || '';
       if (typeof PveStorage !== 'undefined' && storageKey) PveStorage.install(storageKey);
       renderWalletDisplay();
@@ -4285,21 +4341,39 @@ window.PveStorage = PveStorage;
         const check = setInterval(() => {
           if (window._fbReady) { clearInterval(check); resolve(); }
         }, 100);
-        setTimeout(() => { clearInterval(check); resolve(); }, 5000); // max 5s wait
+        setTimeout(() => { clearInterval(check); resolve(); }, 5000);
       });
     }
 
-    // Load cloud save — overrides local defaults if save exists
-    const loaded = await loadGame();
-    if (loaded) {
-      renderSkills();
-      resetPlayerStats();
-      updateXPDisplay();
-      renderSkinGrid();
-      renderWalletDisplay();
-      updateFightButtonWalletGate();
-      showSaveToast('⚔ Progress restored!', '#7a5c1e');
-      claimGuildXP();
+    // Load cloud save
+    const key = await _arenaStorageKey();
+    let cloudLoaded = false;
+    if (key && window.storage && !window.storage._isStub) {
+      const r = await window.storage.get(key, false).catch(() => null);
+      if (r) {
+        // Cloud save exists — use it (most authoritative)
+        const data = JSON.parse(r.value);
+        _applyLoadedData(data);
+        _lsSave(data); // keep local in sync
+        cloudLoaded = true;
+        renderSkills();
+        resetPlayerStats();
+        updateXPDisplay();
+        renderSkinGrid();
+        renderWalletDisplay();
+        updateFightButtonWalletGate();
+        showSaveToast('⚔ Progress restored from cloud!', '#7a5c1e');
+        claimGuildXP();
+      } else {
+        // No cloud save — check if we have a local save to push up
+        const local = _lsLoad();
+        if (local && (local.totalXP > 0 || local.wave > 1)) {
+          // Push local save to cloud so it isn't lost
+          await window.storage.set(key, JSON.stringify(local), false).catch(() => {});
+          showSaveToast('⚔ Local progress synced to cloud!', '#27ae60');
+          submitLeaderboardScore();
+        }
+      }
     }
 
     // Sync skin to profile
@@ -4316,7 +4390,6 @@ window.PveStorage = PveStorage;
     }, 1500);
 
   } catch(e) {
-    // Auth failed or cancelled — game still playable, just no cloud save
     console.warn('PvE Auth:', e?.message || e);
   }
 })();
@@ -4329,7 +4402,6 @@ PveAuth.onLogin(async (profile) => {
   const newAddr = (profile.address || '').toLowerCase();
   if (!newAddr) return;
 
-  // If it's the same wallet that just re-authenticated, do nothing
   const currentAddr = (shopState.walletAddress || '').toLowerCase();
   if (newAddr === currentAddr && state.totalXP > 0) return;
 
@@ -4342,7 +4414,7 @@ PveAuth.onLogin(async (profile) => {
   lbMyKey = null;
   shopState.walletAddress = profile.address || '';
 
-  // Reset in-memory state to defaults before loading new wallet's save
+  // Reset in-memory state
   Object.assign(state.skills,      { stamina:1, attack:1, defense:1, crit:1 });
   Object.assign(state.skillClicks, { stamina:0, attack:0, defense:0, crit:0 });
   state.totalXP = 0; state.lifetimeXP = 0;
@@ -4354,7 +4426,10 @@ PveAuth.onLogin(async (profile) => {
   potionState.miss.owned   = false; potionState.miss.activeThisFight   = false;
   guildState.myGuildCode = null; guildState.myGuildName = null; guildState.isLeader = false;
 
-  // Reset DOM name displays immediately so old wallet's name doesn't persist
+  // Clear localStorage so new wallet starts fresh locally
+  try { localStorage.removeItem(LS_ARENA_KEY); } catch(e) {}
+
+  // Reset DOM
   const combatantNameEl = document.querySelector('.combatant-name');
   if (combatantNameEl) combatantNameEl.textContent = 'THE WARRIOR';
   const heroNameInput = document.getElementById('hero-name-input');
