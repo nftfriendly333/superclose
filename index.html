@@ -1684,6 +1684,9 @@ const WORKER_URL = 'https://pve-api.YOUR-WORKER-SUBDOMAIN.workers.dev';
           <span data-val="5">★</span>
           <span class="star-rating-label" id="arena-rating-label">tap to rate</span>
         </div>
+        <input type="text" id="arena-review-name" maxlength="24" placeholder="Your name (optional)"
+          style="width:100%;background:rgba(0,0,0,0.25);border:1px solid rgba(200,169,110,0.15);color:var(--text);font-family:'DM Mono',monospace;font-size:0.75rem;padding:8px 10px;border-radius:6px;outline:none;margin-bottom:6px;box-sizing:border-box;"
+          oninput="this.value=this.value.replace(/[<>]/g,'')"/>
         <textarea class="review-textarea" id="arena-review-text" rows="3" placeholder="Share your experience with Iron Arena…" maxlength="300" oninput="updateCharCount('arena')"></textarea>
         <div class="review-submit-row">
           <span class="review-char-count" id="arena-char-count">0 / 300</span>
@@ -1739,6 +1742,9 @@ const WORKER_URL = 'https://pve-api.YOUR-WORKER-SUBDOMAIN.workers.dev';
             <span data-val="5">★</span>
             <span class="star-rating-label" id="trade-rating-label">tap to rate</span>
           </div>
+          <input type="text" id="trade-review-name" maxlength="24" placeholder="Your name (optional)"
+            style="width:100%;background:rgba(0,0,0,0.25);border:1px solid rgba(127,170,255,0.15);color:var(--text);font-family:'DM Mono',monospace;font-size:0.75rem;padding:8px 10px;border-radius:6px;outline:none;margin-bottom:6px;box-sizing:border-box;"
+            oninput="this.value=this.value.replace(/[<>]/g,'')"/>
           <textarea class="review-textarea" id="trade-review-text" rows="3" placeholder="Share your experience with Trade Together…" maxlength="300" oninput="updateCharCount('trade')"></textarea>
           <div class="review-submit-row">
             <span class="review-char-count" id="trade-char-count">0 / 300</span>
@@ -1836,7 +1842,7 @@ App details: ${app.description}
 Write it as a real user named "${name}" who has been playing. Make it feel genuine — include a specific detail about the game, something they liked, maybe one small gripe. 2-4 sentences. Star rating: ${stars}.
 Format: Start with the star rating on its own line, then the review. Sign it with the username at the end.`;
 
-    const result = await callClaude([{ role: 'user', content: prompt }]);
+    const result = await _callClaude([{ role: 'user', content: prompt }]);
     textEl.innerHTML = result.replace(/\n/g, '<br>');
   } catch(e) {
     textEl.textContent = 'Failed to generate — try again.';
@@ -1852,6 +1858,9 @@ Format: Start with the star rating on its own line, then the review. Sign it wit
 // ─────────────────────────────────────────────
 const ratings = { arena: 0, trade: 0 };
 const ratingLabels = ['','1 — Terrible','2 — Poor','3 — Okay','4 — Great','5 — Amazing'];
+
+// Firebase REST base — no wallet or auth needed for shared reviews
+const REVIEW_FB = 'https://the-best-iron-arena-default-rtdb.firebaseio.com';
 
 function setRating(appKey, e) {
   const star = e.target.closest('[data-val]');
@@ -1885,7 +1894,7 @@ function initStarHover(appKey) {
       const hval = parseInt(star.dataset.val);
       picker.querySelectorAll('[data-val]').forEach(s => {
         const sv = parseInt(s.dataset.val);
-        s.style.filter   = sv <= hval ? 'grayscale(0) opacity(1)' : 'grayscale(1) opacity(0.25)';
+        s.style.filter    = sv <= hval ? 'grayscale(0) opacity(1)' : 'grayscale(1) opacity(0.25)';
         s.style.transform = sv <= hval ? 'scale(1.2)' : 'scale(1)';
       });
     });
@@ -1903,7 +1912,25 @@ function updateCharCount(appKey) {
   cnt.textContent = `${ta.value.length} / 300`;
 }
 
-// ── Render a single review item into the list ──
+// ── Firebase REST helpers for reviews ────────────────────────────
+async function _fbReviewGet(path) {
+  try {
+    const r = await fetch(`${REVIEW_FB}/${path}.json`);
+    if (!r.ok) return null;
+    return await r.json();
+  } catch(e) { return null; }
+}
+async function _fbReviewSet(path, data) {
+  try {
+    await fetch(`${REVIEW_FB}/${path}.json`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+  } catch(e) {}
+}
+
+// ── Render a single review item ───────────────────────────────────
 function renderReviewItem(list, review, isNew = false) {
   const stars = '★'.repeat(review.rating) + '☆'.repeat(5 - review.rating);
   const when  = isNew ? 'just now' : new Date(review.ts).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
@@ -1918,68 +1945,65 @@ function renderReviewItem(list, review, isNew = false) {
   list.prepend(item);
 }
 
-// ── Load all stored reviews for an app on page load ──
+// ── Load all reviews for an app on page load ──────────────────────
 async function loadReviews(appKey) {
   const list = document.getElementById(`${appKey}-reviews`);
   try {
-    const result = await window.storage.list(`review:${appKey}:`);
-    if (!result || !result.keys.length) return;
-    // fetch each review and sort by timestamp descending
-    const reviews = [];
-    for (const key of result.keys) {
-      try {
-        const r = await window.storage.get(key, true);
-        if (r) reviews.push(JSON.parse(r.value));
-      } catch(e) {}
-    }
-    reviews.sort((a,b) => b.ts - a.ts);
-    // render oldest first so prepend gives newest-on-top
+    const data = await _fbReviewGet(`reviews/${appKey}`);
+    if (!data || typeof data !== 'object') return;
+    const reviews = Object.values(data)
+      .filter(r => r && r.text && r.rating && r.ts)
+      .sort((a, b) => b.ts - a.ts)
+      .slice(0, 20);
     reviews.reverse().forEach(rev => renderReviewItem(list, rev, false));
-  } catch(e) {
-    // storage not available — silently skip
-  }
+  } catch(e) {}
 }
 
-// Load all on page start
+// Load on page start — no wallet needed
 ['arena','trade'].forEach(loadReviews);
 
-// ── Submit a new review ──
+// ── Submit a new review ───────────────────────────────────────────
 async function submitReview(appKey) {
-  const rating = ratings[appKey];
-  const text   = document.getElementById(`${appKey}-review-text`).value.trim();
-  const btn    = document.getElementById(`${appKey}-submit-btn`);
-  const list   = document.getElementById(`${appKey}-reviews`);
+  const rating  = ratings[appKey];
+  const text    = document.getElementById(`${appKey}-review-text`).value.trim();
+  const nameRaw = (document.getElementById(`${appKey}-review-name`)?.value || '').trim();
+  const author  = nameRaw.replace(/[<>]/g, '').trim() || 'Anonymous';
+  const btn     = document.getElementById(`${appKey}-submit-btn`);
+  const list    = document.getElementById(`${appKey}-reviews`);
 
   if (!rating) { alert('Please select a star rating first.'); return; }
   if (!text)   { alert('Please write something before submitting.'); return; }
+  if (text.length < 10) { alert('Review must be at least 10 characters.'); return; }
 
   btn.disabled = true;
   btn.textContent = '⟳ Posting…';
 
-  // Lightly polish via Claude
+  // Lightly polish via Claude API if worker is configured
   let finalText = text;
   try {
-    const polished = await callClaude([{
-      role: 'user',
-      content: `A user left this ${rating}-star review for "${APP_DATA[appKey].name}": "${text}"
+    const workerOk = typeof WORKER_URL !== 'undefined' && !WORKER_URL.includes('YOUR-WORKER');
+    if (workerOk) {
+      const polished = await _callClaude([{
+        role: 'user',
+        content: `A user left this ${rating}-star review for "${APP_DATA[appKey].name}": "${text}"
 Lightly clean up any typos or grammar while keeping their exact voice and tone. Do not add words or change meaning. Output only the cleaned review text, nothing else.`
-    }]);
-    if (polished && polished.length < 600) finalText = polished;
+      }]);
+      if (polished && polished.trim().length > 5 && polished.length < 600) finalText = polished.trim();
+    }
   } catch(e) {}
 
   const review = {
     rating,
     text:   finalText,
-    author: 'Community',
+    author,
     ts:     Date.now()
   };
 
-  // Save to shared persistent storage
+  // Save to Firebase — no wallet needed, shared path
   try {
-    const key = `review:${appKey}:${review.ts}`;
-    await window.storage.set(key, JSON.stringify(review), true);
+    await _fbReviewSet(`reviews/${appKey}/${review.ts}`, review);
   } catch(e) {
-    // storage unavailable — still render locally
+    // Firebase unavailable — still render locally so user sees their review
   }
 
   renderReviewItem(list, review, true);
@@ -1987,12 +2011,15 @@ Lightly clean up any typos or grammar while keeping their exact voice and tone. 
   // Reset form
   document.getElementById(`${appKey}-review-text`).value = '';
   document.getElementById(`${appKey}-char-count`).textContent = '0 / 300';
+  const nameEl = document.getElementById(`${appKey}-review-name`);
+  if (nameEl) nameEl.value = '';
   ratings[appKey] = 0;
   highlightStars(appKey, 0);
   document.getElementById(`${appKey}-rating-label`).textContent = 'tap to rate';
 
   btn.disabled = false;
-  btn.textContent = 'Submit Review';
+  btn.textContent = '✓ Review Posted!';
+  setTimeout(() => { btn.textContent = 'Submit Review'; }, 3000);
 }
 </script>
 
