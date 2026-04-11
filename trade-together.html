@@ -534,9 +534,9 @@
   </div>
   <div id="save-indicator" style="font-size:.58rem;color:rgba(201,169,110,.4);margin-top:3px;letter-spacing:1px">💾 Auto-saving</div>
   <div id="wallet-addr-display" style="font-size:.56rem;color:rgba(201,169,110,.35);margin-top:1px;font-family:monospace;letter-spacing:.5px"></div>
-  <div style="margin-top:4px;display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap;">
-    <span id="tt-name-display" style="font-size:.65rem;color:rgba(201,169,110,.7);letter-spacing:.08em;font-family:'Cinzel',serif;"></span>
-    <button onclick="openRenameModal()" style="font-size:.55rem;color:rgba(201,169,110,.5);background:transparent;border:1px solid rgba(201,169,110,.2);border-radius:4px;padding:2px 8px;cursor:pointer;font-family:'Cinzel',serif;letter-spacing:.06em;transition:all .15s;" onmouseover="this.style.borderColor='rgba(201,169,110,.5)';this.style.color='rgba(201,169,110,.9)'" onmouseout="this.style.borderColor='rgba(201,169,110,.2)';this.style.color='rgba(201,169,110,.5)'">✎ Rename</button>
+  <div style="margin-top:8px;display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap;">
+    <span id="tt-name-display" style="font-size:.78rem;color:rgba(201,169,110,.85);letter-spacing:.08em;font-family:'Cinzel',serif;"></span>
+    <button onclick="openRenameModal()" style="font-size:.72rem;color:#c9a84c;background:linear-gradient(135deg,rgba(201,168,76,.12),rgba(201,168,76,.05));border:1px solid rgba(201,168,76,.4);border-radius:6px;padding:7px 16px;cursor:pointer;font-family:'Cinzel',serif;letter-spacing:.1em;transition:all .2s;box-shadow:0 0 12px rgba(201,168,76,.1);" onmouseover="this.style.background='linear-gradient(135deg,rgba(201,168,76,.22),rgba(201,168,76,.1))';this.style.borderColor='rgba(201,168,76,.7)';this.style.boxShadow='0 0 20px rgba(201,168,76,.25)'" onmouseout="this.style.background='linear-gradient(135deg,rgba(201,168,76,.12),rgba(201,168,76,.05))';this.style.borderColor='rgba(201,168,76,.4)';this.style.boxShadow='0 0 12px rgba(201,168,76,.1)'">✎ RENAME</button>
   </div>
 </div>
 
@@ -662,6 +662,17 @@
       <div class="section-title">&#127942; Leaderboard</div>
       <div style="font-size:.68rem;color:var(--text-dim);letter-spacing:1px">P&amp;L Rankings</div>
     </div>
+
+    <!-- Name input on leaderboard -->
+    <div style="background:rgba(201,168,76,.05);border:1px solid rgba(201,168,76,.18);border-radius:10px;padding:14px 16px;margin-bottom:16px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+      <span style="font-family:'Cinzel',serif;font-size:.68rem;letter-spacing:.12em;color:rgba(201,168,76,.7);white-space:nowrap;">YOUR NAME</span>
+      <input id="lb-name-input" type="text" maxlength="20" placeholder="Set display name…"
+        style="flex:1;min-width:120px;background:rgba(0,0,0,0.3);border:1px solid rgba(201,168,76,.25);color:#f0e8d8;font-family:'Cinzel',serif;font-size:.78rem;padding:8px 12px;border-radius:6px;outline:none;letter-spacing:.04em;"
+        oninput="this.value=this.value.replace(/[^a-zA-Z0-9_ ]/g,'')"
+        onkeydown="if(event.key==='Enter')applyLbName()"/>
+      <button onclick="applyLbName()" style="background:linear-gradient(135deg,rgba(201,168,76,.18),rgba(201,168,76,.07));border:1px solid rgba(201,168,76,.45);color:#c9a84c;font-family:'Cinzel',serif;font-size:.72rem;letter-spacing:.1em;padding:8px 18px;border-radius:6px;cursor:pointer;white-space:nowrap;transition:all .2s;" onmouseover="this.style.borderColor='rgba(201,168,76,.8)';this.style.boxShadow='0 0 14px rgba(201,168,76,.2)'" onmouseout="this.style.borderColor='rgba(201,168,76,.45)';this.style.boxShadow='none'">SAVE</button>
+    </div>
+
     <div id="lb-table-container"><div class="hist-empty"><div class="hist-empty-icon">&#127942;</div>No players yet.</div></div>
   </div>
 </div>
@@ -2966,6 +2977,19 @@ async function renderLiveTrades(){
   }catch(e){con.innerHTML='<div class="hist-empty"><div class="hist-empty-icon">&#128225;</div>Could not load live trades.</div>';console.warn(e);}
 }
 
+// ── Apply name from leaderboard input ────────────────────────────
+function applyLbName(){
+  var input = document.getElementById('lb-name-input');
+  var name  = (input ? input.value.trim() : '').replace(/[^a-zA-Z0-9_ ]/g,'').trim();
+  if(!name){ showToast('Enter a name first','tp-loss'); return; }
+  myUsername = name;
+  setSavedName(myWalletAddress, name);
+  sessionStorage.setItem('tt_username', name);
+  _updateNameDisplay();
+  showToast('Name updated to: ' + name, 'tp-hit');
+  saveState().then(renderLeaderboard);
+}
+
 async function renderLeaderboard(){
   var con=document.getElementById('lb-table-container');
   if(!con)return;
@@ -3002,7 +3026,11 @@ function showPage(name){
   var idx=pages.indexOf(name);if(idx>=0)document.querySelectorAll('.tab')[idx].classList.add('active');
   if(name==='history')renderHistory();
   if(name==='livetrades'){saveState().then(renderLiveTrades);}
-  if(name==='leaderboard'){saveState().then(renderLeaderboard);}
+  if(name==='leaderboard'){
+    var lbInput = document.getElementById('lb-name-input');
+    if(lbInput && myUsername) lbInput.value = myUsername;
+    saveState().then(renderLeaderboard);
+  }
 }
 
 window.addEventListener('load', function(){
