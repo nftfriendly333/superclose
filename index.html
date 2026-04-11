@@ -1039,9 +1039,7 @@ const WORKER_URL = 'https://pve-api.YOUR-WORKER-SUBDOMAIN.workers.dev';
 #site-nav .sn-links a:hover{color:#e8e6f0;border-color:rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);}
 #site-nav .sn-links a.sn-active{color:#e8e6f0;border-color:rgba(255,255,255,0.12);background:rgba(255,255,255,0.06);}
 #site-nav .sn-links a.sn-arena.sn-active{color:#e06c6c;border-color:rgba(224,108,108,0.3);background:rgba(224,108,108,0.07);}
-#site-nav .sn-links a.sn-reap.sn-active{color:#c8a96e;border-color:rgba(200,169,110,0.3);background:rgba(200,169,110,0.07);}
 #site-nav .sn-links a.sn-trade.sn-active{color:#7faaff;border-color:rgba(127,170,255,0.3);background:rgba(127,170,255,0.07);}
-#site-nav .sn-links a.sn-dashboard.sn-active{color:#5cb85c;border-color:rgba(92,184,92,0.3);background:rgba(92,184,92,0.07);}
 #site-nav .sn-links a.sn-tourney.sn-active{color:#d4a8ff;border-color:rgba(212,168,255,0.3);background:rgba(212,168,255,0.07);}
 </style>
 <nav id="site-nav">
@@ -1049,9 +1047,7 @@ const WORKER_URL = 'https://pve-api.YOUR-WORKER-SUBDOMAIN.workers.dev';
   <div class="sn-links">
     <a href="index.html" class="sn-home sn-active">Home</a>
     <a href="iron-arena.html" class="sn-arena">⚔ Iron Arena</a>
-    <a href="reap-what-you-sow.html" class="sn-reap">🌾 Reap What You Sow</a>
     <a href="trade-together.html" class="sn-trade">📊 Trade Together</a>
-    <a href="dashboard.html" class="sn-dashboard">◈ Dashboard</a>
   </div>
 </nav>
 
@@ -1627,7 +1623,7 @@ const WORKER_URL = 'https://pve-api.YOUR-WORKER-SUBDOMAIN.workers.dev';
     <h2 class="manifesto-title">Why <em>Player vs. Environment?</em></h2>
     <div class="manifesto-body">
       <p>The tail end of the last NFT bull run made one thing painfully clear — memecoin culture is not a friendly environment for teamwork. Over 90% of memecoins never graduate from their launchpads. Countless NFT collections trend downward from the moment they mint. The incentive structure rewards the early, the loud, and the connected — not the builders, not the community.</p>
-      <p>Player vs. Environment is fibtechnician's answer to that. A deliberate counter-culture built on a team-first foundation. You can see it directly in the design of these apps — co-op end-game tactics in Iron Arena, and a shared ledger that distributes rewards collectively in Reap What You Sow. Nobody farms alone. Nobody wins by stepping on the next person.</p>
+      <p>Player vs. Environment is fibtechnician's answer to that. A deliberate counter-culture built on a team-first foundation. You can see it directly in the design of these apps — co-op end-game tactics in Iron Arena, and a shared trading arena where players compete on the same leaderboard in Trade Together. Nobody farms alone. Nobody wins by stepping on the next person.</p>
       <p>This is a live project. Fluid enough to pivot when the moment calls for it, grounded enough to hold its direction when it doesn't. The philosophy doesn't change with the market.</p>
       <div class="manifesto-cta">Enjoy this time to shine — <strong>because we will be turning up the heat when Iron Arena goes PVP.</strong></div>
     </div>
@@ -1698,57 +1694,9 @@ const WORKER_URL = 'https://pve-api.YOUR-WORKER-SUBDOMAIN.workers.dev';
     </div>
   </div>
 
-  <p class="section-label" style="margin-top:60px;opacity:1;">02 & 03 — More Apps</p>
+  <p class="section-label" style="margin-top:60px;opacity:1;">02 — More Apps</p>
 
   <div class="cards-grid">
-
-    <!-- REAP WHAT YOU SOW -->
-    <div class="card-small">
-      <div class="card-visual vis-sow">
-        <div class="sow-icon">
-          <div class="sow-glyph">🌾</div>
-          <div class="sow-hud">
-            <div class="sow-row"><span class="sow-label">$PvE</span><div class="sow-bar-bg"><div class="sow-bar-fill" style="width:72%"></div></div></div>
-            <div class="sow-row"><span class="sow-label" style="color:#c084fc;">$ETH</span><div class="sow-bar-bg"><div class="sow-bar-fill purple" style="width:38%"></div></div></div>
-            <div class="sow-row" style="color:var(--muted);font-size:0.55rem;letter-spacing:.1em;">NEXT DRIP · TUESDAY 8AM ET</div>
-          </div>
-        </div>
-      </div>
-      <div class="card-content">
-        <p class="card-number">APP 002 · TOKEN SIMULATOR</p>
-        <h2 class="card-title">Reap What<br>You Sow</h2>
-        <p class="card-desc">A $PvE token economy simulator with a shared internal ledger. Register wallets, automate distributions, and track a rolling transaction history timed to a weekly $ETH drip cycle.</p>
-        <div class="tags">
-          <span class="tag gold">$PvE Token</span>
-          <span class="tag">Wallet Registry</span>
-          <span class="tag">Shared Ledger</span>
-        </div>
-        <ul class="features gold">
-          <li>Wallet Registry: named wallets start with 1000 $PvE, balances visible to all</li>
-          <li>Weekly +$0.01 $ETH drip per wallet every Tuesday — enough to take part in hundreds of transactions per week</li>
-          <li>Batch distribution automation — up to 333 separate transactions</li>
-          <li>Shared ledger synced every 3 seconds across all sessions</li>
-        </ul>
-        <a class="launch-btn gold" href="reap-what-you-sow.html">▶ Open Reap What You Sow</a>
-        <div class="user-review-form">
-          <span class="user-review-label">★ Leave a Review</span>
-          <div class="star-picker" id="sow-stars" onclick="setRating('sow', event)">
-            <span data-val="1">★</span>
-            <span data-val="2">★</span>
-            <span data-val="3">★</span>
-            <span data-val="4">★</span>
-            <span data-val="5">★</span>
-            <span class="star-rating-label" id="sow-rating-label">tap to rate</span>
-          </div>
-          <textarea class="review-textarea" id="sow-review-text" rows="3" placeholder="Share your experience with Reap What You Sow…" maxlength="300" oninput="updateCharCount('sow')"></textarea>
-          <div class="review-submit-row">
-            <span class="review-char-count" id="sow-char-count">0 / 300</span>
-            <button class="review-submit-btn" id="sow-submit-btn" onclick="submitReview('sow')">Submit Review</button>
-          </div>
-          <div class="reviews-list" id="sow-reviews"></div>
-        </div>
-      </div>
-    </div>
 
     <!-- TRADE TOGETHER -->
     <div class="card-small">
@@ -1766,7 +1714,7 @@ const WORKER_URL = 'https://pve-api.YOUR-WORKER-SUBDOMAIN.workers.dev';
         </div>
       </div>
       <div class="card-content">
-        <p class="card-number">APP 003 · FANTASY TRADING</p>
+        <p class="card-number">APP 002 · FANTASY TRADING</p>
         <h2 class="card-title">Trade<br>Together</h2>
         <p class="card-desc">A fantasy commodity trading game. Go long or short on six medieval goods — Dragon Longswords, Onyx Gems, Fire Runes, and more — with live OHLC candle charts and a full portfolio tracker.</p>
         <div class="tags">
@@ -1801,46 +1749,6 @@ const WORKER_URL = 'https://pve-api.YOUR-WORKER-SUBDOMAIN.workers.dev';
       </div>
     </div>
 
-    <!-- DASHBOARD -->
-    <div class="card-small" style="grid-column: 1 / -1;">
-      <div class="card-visual" style="background:linear-gradient(135deg,#081a0d,#050d08);min-height:180px;position:relative;">
-        <div style="position:absolute;inset:0;background:radial-gradient(ellipse at 50% 50%,rgba(92,184,92,0.15) 0%,transparent 65%);"></div>
-        <div style="position:relative;z-index:2;display:flex;flex-direction:column;align-items:center;gap:14px;">
-          <div style="font-size:3.2rem;filter:drop-shadow(0 0 18px rgba(92,184,92,0.55));animation:float 6s ease-in-out infinite;">◈</div>
-          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;width:min(320px,90vw);">
-            <div style="background:rgba(92,184,92,0.07);border:1px solid rgba(92,184,92,0.2);border-radius:8px;padding:8px 6px;text-align:center;">
-              <div style="font-size:0.52rem;letter-spacing:0.15em;color:rgba(92,184,92,0.6);text-transform:uppercase;margin-bottom:4px;">$PvE</div>
-              <div id="db-pve-val" style="font-size:0.88rem;color:#5cb85c;font-family:'DM Mono',monospace;">—</div>
-            </div>
-            <div style="background:rgba(200,169,110,0.07);border:1px solid rgba(200,169,110,0.2);border-radius:8px;padding:8px 6px;text-align:center;">
-              <div style="font-size:0.52rem;letter-spacing:0.15em;color:rgba(200,169,110,0.6);text-transform:uppercase;margin-bottom:4px;">XP</div>
-              <div id="db-xp-val"  style="font-size:0.88rem;color:#c8a96e;font-family:'DM Mono',monospace;">—</div>
-            </div>
-            <div style="background:rgba(127,170,255,0.07);border:1px solid rgba(127,170,255,0.2);border-radius:8px;padding:8px 6px;text-align:center;">
-              <div style="font-size:0.52rem;letter-spacing:0.15em;color:rgba(127,170,255,0.6);text-transform:uppercase;margin-bottom:4px;">ETH</div>
-              <div id="db-eth-val" style="font-size:0.88rem;color:#7faaff;font-family:'DM Mono',monospace;">—</div>
-            </div>
-            <div style="background:rgba(212,168,255,0.07);border:1px solid rgba(212,168,255,0.2);border-radius:8px;padding:8px 6px;text-align:center;">
-              <div style="font-size:0.52rem;letter-spacing:0.15em;color:rgba(212,168,255,0.6);text-transform:uppercase;margin-bottom:4px;">P&L</div>
-              <div id="db-pnl-val" style="font-size:0.88rem;color:#d4a8ff;font-family:'DM Mono',monospace;">—</div>
-            </div>
-          </div>
-        </div>
-      </div>
-      <div class="card-content">
-        <p class="card-number">OVERVIEW · ALL APPS</p>
-        <h2 class="card-title" style="color:#5cb85c;">Dashboard</h2>
-        <p class="card-desc">Your across-the-board snapshot — $PvE balance from Reap What You Sow, XP earned in Iron Arena, ETH holdings, and Trade Together portfolio P&amp;L.</p>
-        <div class="tags">
-          <span class="tag" style="color:#5cb85c;border-color:rgba(92,184,92,0.3);">$PvE Balance</span>
-          <span class="tag gold">XP</span>
-          <span class="tag blue">ETH</span>
-          <span class="tag" style="color:#d4a8ff;border-color:rgba(212,168,255,0.3);">Trade P&amp;L</span>
-        </div>
-        <a class="launch-btn" href="dashboard.html" style="border:1px solid rgba(92,184,92,0.45);background:rgba(92,184,92,0.08);color:#5cb85c;">◈ Open Dashboard</a>
-      </div>
-    </div>
-
   </div>
 </main>
 
@@ -1848,7 +1756,7 @@ const WORKER_URL = 'https://pve-api.YOUR-WORKER-SUBDOMAIN.workers.dev';
   <div class="footer-inner">
     <div class="footer-badge">
       <span style="width:6px;height:6px;border-radius:50%;background:var(--accent2);animation:pulse 2s infinite;display:inline-block;"></span>
-      <span>Three Apps · No Install Required</span>
+      <span>Two Apps · No Install Required</span>
     </div>
     <p>Each app ships as a fully self-contained HTML file.</p>
   </div>
@@ -1865,11 +1773,6 @@ const APP_DATA = {
     name: 'Iron Arena',
     type: 'Turn-Based Browser RPG',
     description: `Iron Arena is a wave-based browser RPG with turn-based combat. Players fight escalating enemies across 7 tiers: Common (Wild Wolf, Goblin Scout), Uncommon (Orc Warrior), Rare (Dark Knight, Stone Golem), Epic (Shadow Dragon, Arcane Lich), Legendary (Demon Lord, Chaos Titan, Soul Reaper, Abyssal Kraken, Inferno Phoenix, Storm Colossus), Mythic (Void Emperor, Eclipse Wraith, Blood Leviathan, Eternal Devourer), and Titan (World Breaker, Astral Executioner, Undying Behemoth, Void Architect, The First Evil). Players upgrade 4 stats: Stamina, Attack, Defense, and Crit — each requiring 25 clicks per level with a 1-minute cooldown after each level-up. The XP shop sells 12 cosmetic skins from Wanderer (free) to The Undying One (150,000 XP), plus One Strike (instant-kill gamble), Venom of Spite (poison), and Veil of Shadows (miss chance). Combat features Block, critical hits, floating damage numbers, and screen-shake animations. Firebase powers a global leaderboard, a guild system with XP distribution, and wallet-keyed cloud saves via Ethereum wallet authentication.`
-  },
-  sow: {
-    name: 'Reap What You Sow',
-    type: '$PvE Token Economy Simulator',
-    description: `Reap What You Sow is a browser-based $PvE token economy simulator. Connect any Ethereum wallet to join the shared ledger — new wallets start with 1,000 $PvE locked and 100 $PvE available. A weekly $ETH drip of +0.000005 ETH per wallet fires every Tuesday at 8 AM ET, with a live countdown timer. Sending tokens costs 0.000000015 $ETH per transaction. Registered wallets can add up to 3 third-party wallets by address — each added wallet receives a sign-in permission grant so they can connect their own wallet later and be recognized automatically. The Automation tab lets users set timed batch-send rules. The Ledger tab logs every transaction with timestamps and block numbers, synced every 3 seconds across all sessions. A live leaderboard ranks all wallets by total $PvE holdings.`
   },
   trade: {
     name: 'Trade Together',
@@ -1947,7 +1850,7 @@ Format: Start with the star rating on its own line, then the review. Sign it wit
 // ─────────────────────────────────────────────
 // USER REVIEW SYSTEM — persistent shared storage
 // ─────────────────────────────────────────────
-const ratings = { arena: 0, sow: 0, trade: 0 };
+const ratings = { arena: 0, trade: 0 };
 const ratingLabels = ['','1 — Terrible','2 — Poor','3 — Okay','4 — Great','5 — Amazing'];
 
 function setRating(appKey, e) {
@@ -1992,7 +1895,7 @@ function initStarHover(appKey) {
   });
 }
 
-['arena','sow','trade'].forEach(initStarHover);
+['arena','trade'].forEach(initStarHover);
 
 function updateCharCount(appKey) {
   const ta  = document.getElementById(`${appKey}-review-text`);
@@ -2038,7 +1941,7 @@ async function loadReviews(appKey) {
 }
 
 // Load all on page start
-['arena','sow','trade'].forEach(loadReviews);
+['arena','trade'].forEach(loadReviews);
 
 // ── Submit a new review ──
 async function submitReview(appKey) {
@@ -2429,7 +2332,7 @@ const PveAuth = (() => {
     <div class="ah">
       <div class="ah-logo">⚔</div>
       <div class="ah-title">PvE Hub</div>
-      <div class="ah-sub">Connect your wallet once to access<br>all apps — Iron Arena, Trade Together,<br>Reap What You Sow &amp; more</div>
+      <div class="ah-sub">Connect your wallet once to access<br>all apps — Iron Arena &amp; Trade Together</div>
     </div>
     <div class="abody">
       <button class="abtn abtn-primary" id="a-btn" onclick="PveAuth._openModal()">
