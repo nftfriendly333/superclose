@@ -116,7 +116,6 @@ const WORKER_URL = 'https://pve-api.YOUR-WORKER-SUBDOMAIN.workers.dev';
 #site-nav .sn-links a.sn-reap.sn-active{color:#c8a96e;border-color:rgba(200,169,110,0.3);background:rgba(200,169,110,0.07);}
 #site-nav .sn-links a.sn-trade.sn-active{color:#7faaff;border-color:rgba(127,170,255,0.3);background:rgba(127,170,255,0.07);}
 #site-nav .sn-links a.sn-dashboard.sn-active{color:#5cb85c;border-color:rgba(92,184,92,0.3);background:rgba(92,184,92,0.07);}
-#site-nav .sn-links a.sn-tourney.sn-active{color:#d4a8ff;border-color:rgba(212,168,255,0.3);background:rgba(212,168,255,0.07);}
 </style>
 <nav id="site-nav">
   <a class="sn-logo" href="index.html">PvE <span>Hub</span></a>
@@ -132,12 +131,62 @@ const WORKER_URL = 'https://pve-api.YOUR-WORKER-SUBDOMAIN.workers.dev';
 
 
 
-<div class="dash-wrap">
+<!-- ── CONNECT WALL (shown when no wallet connected) ── -->
+<div id="connect-wall" style="display:none;">
+  <div style="max-width:400px;margin:0 auto;padding:80px 16px;text-align:center;">
+    <div style="font-size:3rem;margin-bottom:20px;">⬡</div>
+    <h1 style="font-family:'Playfair Display',serif;font-size:2rem;font-weight:900;margin-bottom:12px;">PvE <em style="color:var(--gold);font-style:italic;">Dashboard</em></h1>
+    <p style="font-size:0.78rem;color:var(--muted);line-height:1.8;margin-bottom:32px;">Connect your Ethereum wallet to view your combined stats across Iron Arena, Reap What You Sow, and Trade Together.</p>
+    <button id="connect-wall-btn" onclick="PveAuth._openModal()" style="
+      background:linear-gradient(135deg,rgba(200,169,110,0.15),rgba(200,169,110,0.06));
+      border:1px solid rgba(200,169,110,0.5);
+      color:var(--gold);
+      font-family:'DM Mono',monospace;
+      font-size:0.82rem;
+      letter-spacing:0.12em;
+      text-transform:uppercase;
+      padding:16px 32px;
+      border-radius:10px;
+      cursor:pointer;
+      width:100%;
+      max-width:280px;
+      transition:all 0.2s;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      gap:10px;
+      margin:0 auto;
+    ">
+      <span>⬡</span> Connect Wallet
+    </button>
+    <p style="font-size:0.6rem;color:var(--muted);margin-top:16px;opacity:0.6;">MetaMask · Coinbase · Rainbow · Trust · WalletConnect</p>
+    <p style="font-size:0.58rem;color:var(--muted);margin-top:6px;opacity:0.4;">🔒 Non-custodial — we never access your funds</p>
+  </div>
+</div>
+
+<!-- ── DASHBOARD (shown when wallet connected) ── -->
+<div id="dash-wrap" class="dash-wrap" style="display:none;">
   <div class="dash-header">
     <p class="dash-eyebrow">Your Profile</p>
     <h1 class="dash-title">PvE <em>Dashboard</em></h1>
-    <p class="dash-sub" id="dash-sub">Loading your stats…</p>
+    <p class="dash-sub" id="dash-sub"></p>
     <p class="dash-wallet" id="dash-wallet"></p>
+    <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;">
+      <button id="btn-refresh" onclick="refreshDashboard()" style="
+        background:rgba(92,184,92,0.08);border:1px solid rgba(92,184,92,0.3);
+        color:var(--green);font-family:'DM Mono',monospace;font-size:0.65rem;
+        letter-spacing:0.1em;text-transform:uppercase;padding:6px 14px;
+        border-radius:6px;cursor:pointer;transition:all 0.2s;">
+        ↺ Refresh Stats
+      </button>
+      <button onclick="disconnectWallet()" style="
+        background:rgba(224,108,108,0.06);border:1px solid rgba(224,108,108,0.2);
+        color:var(--muted);font-family:'DM Mono',monospace;font-size:0.65rem;
+        letter-spacing:0.1em;text-transform:uppercase;padding:6px 14px;
+        border-radius:6px;cursor:pointer;transition:all 0.2s;">
+        Disconnect
+      </button>
+    </div>
   </div>
 
   <!-- TOTALS BAR -->
@@ -665,19 +714,47 @@ function statBlock(label, val, cls='') {
   </div>`;
 }
 
+function showConnectWall() {
+  document.getElementById('connect-wall').style.display = 'block';
+  document.getElementById('dash-wrap').style.display    = 'none';
+}
+
+function showDashboard() {
+  document.getElementById('connect-wall').style.display = 'none';
+  document.getElementById('dash-wrap').style.display    = 'block';
+}
+
+function disconnectWallet() {
+  if (!confirm('Disconnect wallet?')) return;
+  PveAuth.logout();
+  showConnectWall();
+}
+
+async function refreshDashboard() {
+  const btn = document.getElementById('btn-refresh');
+  if (btn) { btn.textContent = '↺ Refreshing…'; btn.disabled = true; }
+  const profile = PveAuth.getProfile();
+  if (profile) await loadDashboard(profile);
+  if (btn) { btn.textContent = '↺ Refresh Stats'; btn.disabled = false; }
+}
+
 async function loadDashboard(profile) {
-  const skin = profile.skin || '🧙';
+  const skin = profile.skin || '⚔';
   const name = profile.displayName || PveAuth._shortAddr(profile.address);
   document.getElementById('dash-sub').innerHTML =
     `<span style="font-size:1.4rem;vertical-align:middle;margin-right:6px;">${skin}</span> ${name}`;
   document.getElementById('dash-wallet').innerHTML =
     `Wallet: <span>${profile.address}</span>`;
 
-  // Show loading state in all panels before fetches fire
+  // Reset panels to loading state
   const loadingHTML = '<span class="app-stat-lbl" style="opacity:0.5;animation:pulse 1.2s ease-in-out infinite;">Loading…</span>';
   ['panel-arena','panel-reap','panel-trade'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.innerHTML = loadingHTML;
+  });
+  ['total-xp','total-pve','total-eth','total-trade'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = '—';
   });
 
   // Run all three fetches in parallel
@@ -697,9 +774,11 @@ async function loadArenaStats(profile) {
   const panel = document.getElementById('panel-arena');
   try {
     const addr = profile.address.toLowerCase();
+    // Wait for storage to be ready with a timeout
+    await _waitForStorage();
     const r = await window.storage.get('arena-save:' + addr, false);
     if (!r) {
-      panel.innerHTML = '<span class="app-stat-lbl" style="opacity:0.5;">No save found — play Iron Arena first.</span>';
+      panel.innerHTML = noDataMsg('No save found — play Iron Arena first.', 'iron-arena.html', 'Play →');
       return { xp: 0 };
     }
     const d = JSON.parse(r.value);
@@ -709,17 +788,18 @@ async function loadArenaStats(profile) {
     const hero  = d.shop?.heroName || name;
     const skinI = d.shop?.equippedSkin || 0;
     panel.innerHTML =
-      statBlock('Hero', (SKINS_MAP[skinI] || '🧙') + ' ' + hero, 'red') +
-      statBlock('Wave', wave, 'red') +
-      statBlock('Lifetime XP', fmt(xp, 0), 'red') +
-      statBlock('Current XP', fmt(d.totalXP || 0, 0), 'red') +
-      statBlock('Stamina', 'Lv ' + (s.stamina || 1)) +
-      statBlock('Attack',  'Lv ' + (s.attack  || 1)) +
-      statBlock('Defense', 'Lv ' + (s.defense || 1)) +
-      statBlock('Crit',    'Lv ' + (s.crit    || 1));
+      statBlock('Hero',        (SKINS_MAP[skinI] || '🧙') + ' ' + (hero || 'Warrior'), 'red') +
+      statBlock('Wave',        wave,              'red') +
+      statBlock('Lifetime XP', fmt(xp, 0),        'red') +
+      statBlock('Current XP',  fmt(d.totalXP||0, 0), 'red') +
+      statBlock('Stamina',     'Lv ' + (s.stamina || 1)) +
+      statBlock('Attack',      'Lv ' + (s.attack  || 1)) +
+      statBlock('Defense',     'Lv ' + (s.defense || 1)) +
+      statBlock('Crit',        'Lv ' + (s.crit    || 1));
     return { xp };
   } catch(e) {
-    panel.innerHTML = '<span class="app-stat-lbl" style="opacity:0.5;">Could not load Arena data.</span>';
+    console.warn('Arena stats error:', e);
+    panel.innerHTML = errMsg('Could not load Arena data.', 'iron-arena.html', 'Open →');
     return { xp: 0 };
   }
 }
@@ -727,31 +807,31 @@ async function loadArenaStats(profile) {
 async function loadReapStats(profile) {
   const panel = document.getElementById('panel-reap');
   try {
-    const [rs] = await Promise.all([
-      window.storage.get('rwys-state', true),
-    ]);
+    await _waitForStorage();
+    const rs = await window.storage.get('rwys-state', true);
     const st = rs ? JSON.parse(rs.value) : null;
     if (!st) {
-      panel.innerHTML = '<span class="app-stat-lbl" style="opacity:0.5;">No Reap wallet found — visit Reap What You Sow first.</span>';
+      panel.innerHTML = noDataMsg('No Reap wallet found — visit Reap What You Sow first.', 'reap-what-you-sow.html', 'Open →');
       return { pve: 0, eth: 0 };
     }
     const wallet = st.wallets?.find(w => w.addr && w.addr.toLowerCase() === profile.address.toLowerCase());
     if (!wallet) {
-      panel.innerHTML = '<span class="app-stat-lbl" style="opacity:0.5;">No Reap wallet found — visit Reap What You Sow first.</span>';
+      panel.innerHTML = noDataMsg('Wallet not registered — visit Reap What You Sow to join.', 'reap-what-you-sow.html', 'Open →');
       return { pve: 0, eth: 0 };
     }
     const pve = (wallet.balance || 0) + (wallet.locked || 0);
     const eth = wallet.eth || 0;
     panel.innerHTML =
-      statBlock('Wallet', (profile.skin||'🧙') + ' ' + (wallet.name || name)) +
+      statBlock('Wallet',      (profile.skin||'🌾') + ' ' + wallet.name, 'gold') +
       statBlock('$PvE Balance', fmt(wallet.balance || 0), 'gold') +
       statBlock('$PvE Locked',  fmt(wallet.locked  || 0), 'gold') +
-      statBlock('$ETH Earned',  fmt(eth, 4), 'green') +
-      statBlock('Total Vol',    fmt(st.totalVol || 0, 2), 'gold') +
-      statBlock('Rewards',      fmt(st.totalRewards || 0, 2));
+      statBlock('$ETH Earned',  fmt(eth, 6),              'green') +
+      statBlock('Total Volume', fmt(st.totalVol    || 0, 2), 'gold') +
+      statBlock('Rewards',      fmt(st.totalRewards|| 0, 2));
     return { pve, eth };
   } catch(e) {
-    panel.innerHTML = '<span class="app-stat-lbl" style="opacity:0.5;">Could not load Reap data.</span>';
+    console.warn('Reap stats error:', e);
+    panel.innerHTML = errMsg('Could not load Reap data.', 'reap-what-you-sow.html', 'Open →');
     return { pve: 0, eth: 0 };
   }
 }
@@ -759,14 +839,14 @@ async function loadReapStats(profile) {
 async function loadTradeStats(profile) {
   const panel = document.getElementById('panel-trade');
   try {
-    const TT_FB = 'https://the-best-iron-arena-default-rtdb.firebaseio.com';
-    function ttKey(s){ return s.replace(/[^a-zA-Z0-9_-]/g,'_'); }
+    const TT_FB   = 'https://the-best-iron-arena-default-rtdb.firebaseio.com';
+    const ttKey   = s => s.replace(/[^a-zA-Z0-9_-]/g, '_');
     const username = profile.address.toLowerCase().slice(0,6) + '_' + profile.address.toLowerCase().slice(-4);
-    const userKey  = ttKey(username.toLowerCase());
+    const userKey  = ttKey(username);
     const res = await fetch(`${TT_FB}/trade/states/${userKey}.json`);
     const d   = res.ok ? await res.json() : null;
     if (!d || typeof d.wallet !== 'number') {
-      panel.innerHTML = '<span class="app-stat-lbl" style="opacity:0.5;">No save found — play Trade Together first.</span>';
+      panel.innerHTML = noDataMsg('No save found — play Trade Together first.', 'trade-together.html', 'Trade →');
       return { val: 0 };
     }
     const cash   = d.wallet || 0;
@@ -779,36 +859,67 @@ async function loadTradeStats(profile) {
     panel.innerHTML =
       statBlock('Cash',           fmt(cash)   + ' PvE', 'blue') +
       statBlock('Total Wealth',   fmt(wealth) + ' PvE', 'blue') +
-      statBlock('Open Positions', pos.length,  'blue') +
+      statBlock('Open Positions', pos.length,            'blue') +
       statBlock('Total Trades',   hist.length) +
-      statBlock('Wins',   wins,   'green') +
-      statBlock('Losses', losses, 'red') +
-      statBlock('Total P&L', (pnl>=0?'+':'') + fmt(pnl) + ' PvE', pnl>=0?'green':'red');
+      statBlock('Wins',           wins,                  'green') +
+      statBlock('Losses',         losses,                'red') +
+      statBlock('Total P&L', (pnl >= 0 ? '+' : '') + fmt(pnl) + ' PvE', pnl >= 0 ? 'green' : 'red');
     return { val: wealth };
   } catch(e) {
-    panel.innerHTML = '<span class="app-stat-lbl" style="opacity:0.5;">Could not load Trade data.</span>';
+    console.warn('Trade stats error:', e);
+    panel.innerHTML = errMsg('Could not load Trade data.', 'trade-together.html', 'Trade →');
     return { val: 0 };
   }
 }
 
+// Wait for window.storage to be real (not the stub) with a 6s timeout
+function _waitForStorage() {
+  return new Promise(resolve => {
+    if (window.storage && !window.storage._isStub) { resolve(); return; }
+    let tries = 0;
+    const iv = setInterval(() => {
+      if ((window.storage && !window.storage._isStub) || tries++ > 40) {
+        clearInterval(iv); resolve();
+      }
+    }, 150);
+  });
+}
+
+function noDataMsg(msg, href, label) {
+  return `<div style="display:flex;align-items:center;justify-content:space-between;width:100%;flex-wrap:wrap;gap:8px;">
+    <span class="app-stat-lbl" style="opacity:0.5;">${msg}</span>
+    <a href="${href}" style="font-size:0.62rem;color:var(--muted);text-decoration:none;padding:4px 10px;border:1px solid var(--border);border-radius:5px;">${label}</a>
+  </div>`;
+}
+
+function errMsg(msg, href, label) {
+  return `<div style="display:flex;align-items:center;justify-content:space-between;width:100%;flex-wrap:wrap;gap:8px;">
+    <span class="app-stat-lbl" style="opacity:0.5;color:var(--red);">⚠ ${msg}</span>
+    <a href="${href}" style="font-size:0.62rem;color:var(--muted);text-decoration:none;padding:4px 10px;border:1px solid var(--border);border-radius:5px;">${label}</a>
+  </div>`;
+}
+
+// ── BOOT ─────────────────────────────────────────────────────────
 (async () => {
   await PveAuth.init('dashboard');
-  const profile = await PveAuth.requireLogin();
-  // Gate: wait for PveStorage Firebase to be ready before fetching data.
-  // PveStorage.install() fires synchronously on wallet connect but Firebase
-  // init is async — onReady ensures the DB connection is live first.
-  await new Promise(resolve => {
-    if (window.storage && typeof PveStorage !== 'undefined') {
-      PveStorage.onReady(resolve);
-    } else {
-      // Fallback: short poll until window.storage is populated
-      let tries = 0;
-      const iv = setInterval(() => {
-        if (window.storage || ++tries > 20) { clearInterval(iv); resolve(); }
-      }, 150);
-    }
-  });
-  await loadDashboard(profile);
+  const cached = PveAuth.getProfile();
+
+  if (cached && (cached.address || cached.uid)) {
+    // Wallet already cached — show dashboard immediately and load data
+    showDashboard();
+    // Wait for PveStorage Firebase to be ready (max 6s)
+    await _waitForStorage();
+    await loadDashboard(cached);
+  } else {
+    // No wallet — show connect wall
+    showConnectWall();
+    // When user connects, load dashboard
+    PveAuth.onLogin(async (profile) => {
+      showDashboard();
+      await _waitForStorage();
+      await loadDashboard(profile);
+    });
+  }
 })();
 </script>
 </body>
