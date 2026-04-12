@@ -2481,7 +2481,7 @@ function enemyTurn() {
     setTimeout(() => { addLog(`--- Turn ${f.turn} ---`, 'turn'); setTurnIndicator('player'); setActionButtons(true); }, 600);
     return;
   }
-  let dmg = Math.max(1, currentEnemy.atk - getPlayerDefense() * 0.5);
+  let dmg = Math.max(1, Math.round(currentEnemy.atk - getPlayerDefense() * 0.5));
   let enemyCrit = false;
   if (f.blocking) {
     const blockFactor = 0.15 + (state.skills.defense * 0.03);
