@@ -73,6 +73,16 @@
   .card-visual { position: relative; min-height: 220px; display: flex; align-items: center; justify-content: center; overflow: hidden; }
   .vis-arena { background: linear-gradient(135deg, #1a0808, #0f0505); }
   .vis-arena::before { content: ''; position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 50%, rgba(220,60,60,0.22) 0%, transparent 65%); }
+  .vis-trade { background: linear-gradient(135deg, #050a1a, #030810); }
+  .vis-trade::before { content: ''; position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 50%, rgba(127,170,255,0.18) 0%, transparent 65%); }
+  .arena-icon, .trade-icon { position: relative; z-index: 2; display: flex; flex-direction: column; align-items: center; gap: 18px; }
+  .arena-glyph { font-size: 5rem; filter: drop-shadow(0 0 24px rgba(255,80,80,0.6)); animation: float 5.25s ease-in-out infinite; }
+  .trade-glyph { font-size: 5rem; filter: drop-shadow(0 0 20px rgba(127,170,255,0.5)); animation: float 7.5s ease-in-out infinite; }
+  .enemy-row { display: flex; gap: 12px; opacity: 0.75; }
+  .enemy-chip { font-size: 1.4rem; padding: 6px 10px; border: 1px solid rgba(224,108,108,0.3); border-radius: 8px; background: rgba(224,108,108,0.08); animation: float 6s ease-in-out infinite; }
+  .enemy-chip:nth-child(2){animation-delay:.5s}.enemy-chip:nth-child(3){animation-delay:1s}.enemy-chip:nth-child(4){animation-delay:1.5s}
+  .arena-ring { width: 80px; height: 80px; border-radius: 50%; border: 2px solid rgba(224,108,108,0.4); position: relative; animation: spin 12s linear infinite; opacity: 0.6; }
+  .arena-ring2 { position: absolute; width: 50px; height: 50px; border-radius: 50%; border: 1px solid rgba(224,108,108,0.2); top: 50%; left: 50%; transform: translate(-50%,-50%); animation: spin 7.5s linear infinite reverse; }
 
   .trade-items { display: flex; gap: 10px; opacity: 0.75; }
   .trade-chip { font-size: 1.2rem; padding: 5px 9px; border: 1px solid rgba(127,170,255,0.3); border-radius: 8px; background: rgba(127,170,255,0.07); animation: float 6s ease-in-out infinite; }
@@ -1873,6 +1883,14 @@ const WORKER_URL = 'https://pve-api.YOUR-WORKER-SUBDOMAIN.workers.dev';
     </a>
     <a href="trade-together.html" class="trade-app-footer">
       📊 <strong>Trade Together</strong>
+    </a>
+    <a href="https://x.com/pveonop" target="_blank" rel="noopener" class="x-follow-footer">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.73-8.835L1.254 2.25H8.08l4.253 5.622zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+      Follow <strong>@pveonop</strong> on X
+    </a>
+    <a href="https://t.me/PvE_On_Optimism" target="_blank" rel="noopener" class="tg-follow-footer">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.894 8.221-1.97 9.28c-.145.658-.537.818-1.084.508l-3-2.21-1.447 1.394c-.16.16-.295.295-.605.295l.213-3.053 5.56-5.023c.242-.213-.054-.333-.373-.12L7.88 13.617l-2.96-.924c-.643-.204-.657-.643.136-.953l11.57-4.461c.537-.194 1.006.131.834.942z"/></svg>
+      Join <strong>PvE on Optimism</strong> on Telegram
     </a>
   </div>
 </footer>
