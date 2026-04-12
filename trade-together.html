@@ -29,6 +29,42 @@
     box-shadow:inset 0 1px 0 rgba(255,215,0,.1),0 2px 8px rgba(0,0,0,.5)}
   .wallet-value{font-weight:700}
 
+  /* RENAME BUTTON */
+  .btn-rename{display:inline-flex;align-items:center;gap:6px;
+    background:linear-gradient(135deg,#2a1f08,#1e1505);
+    border:2px solid var(--gold-dark);border-radius:20px;padding:6px 18px;margin-top:7px;
+    font-family:'Cinzel',serif;font-size:.82rem;font-weight:700;color:var(--gold);
+    cursor:pointer;transition:all .2s;letter-spacing:.8px;text-transform:uppercase}
+  .btn-rename:hover{background:linear-gradient(135deg,#4a2e10,#2d1a08);
+    box-shadow:0 0 12px rgba(240,192,64,.25);border-color:var(--gold)}
+  .btn-rename:active{transform:scale(.96)}
+
+  /* RENAME MODAL */
+  .rename-overlay{position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:800;
+    display:flex;align-items:center;justify-content:center;padding:20px;
+    opacity:0;pointer-events:none;transition:opacity .2s}
+  .rename-overlay.open{opacity:1;pointer-events:all}
+  .rename-box{background:linear-gradient(180deg,#3d2510,#2d1a0a);border:2px solid var(--gold-dark);
+    border-radius:14px;padding:28px 24px;max-width:320px;width:100%;text-align:center;
+    box-shadow:0 8px 40px rgba(0,0,0,.7);
+    transform:scale(.88);transition:transform .25s cubic-bezier(.34,1.2,.64,1)}
+  .rename-overlay.open .rename-box{transform:scale(1)}
+  .rename-box-title{font-family:'Cinzel',serif;font-size:1.1rem;color:var(--gold);
+    letter-spacing:1px;margin-bottom:16px}
+  .rename-input{width:100%;background:rgba(0,0,0,.35);border:1.5px solid var(--border);
+    border-radius:8px;padding:11px 14px;color:var(--text);font-family:'Crimson Text',serif;
+    font-size:1.05rem;outline:none;transition:border-color .2s;text-align:center;margin-bottom:14px}
+  .rename-input:focus{border-color:var(--gold-dark)}
+  .rename-btns{display:flex;gap:8px}
+  .rename-btn-cancel{flex:1;background:rgba(0,0,0,.3);border:1.5px solid var(--border);border-radius:8px;
+    padding:11px;font-family:'Cinzel',serif;font-size:.78rem;color:var(--text-dim);cursor:pointer;
+    transition:all .15s;text-transform:uppercase;letter-spacing:1px}
+  .rename-btn-cancel:hover{border-color:var(--text-dim);color:var(--text)}
+  .rename-btn-save{flex:1;background:linear-gradient(135deg,#4a2e10,#2d1a08);border:2px solid var(--gold-dark);
+    border-radius:8px;padding:11px;font-family:'Cinzel',serif;font-size:.78rem;font-weight:700;
+    color:var(--gold);cursor:pointer;transition:all .15s;text-transform:uppercase;letter-spacing:1px}
+  .rename-btn-save:hover{background:linear-gradient(135deg,#5a3a14,#3a2010);box-shadow:0 0 10px rgba(240,192,64,.2)}
+
   /* TABS */
   .tabs{display:flex;background:var(--brown-dark);border-bottom:2px solid var(--gold-dark)}
   .tab{flex:1;padding:9px 2px;text-align:center;font-family:'Cinzel',serif;font-size:.7rem;letter-spacing:.5px;
@@ -467,7 +503,9 @@
 #site-nav .sn-links a:hover{color:#e8e6f0;border-color:rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);}
 #site-nav .sn-links a.sn-active{color:#e8e6f0;border-color:rgba(255,255,255,0.12);background:rgba(255,255,255,0.06);}
 #site-nav .sn-links a.sn-arena.sn-active{color:#e06c6c;border-color:rgba(224,108,108,0.3);background:rgba(224,108,108,0.07);}
+#site-nav .sn-links a.sn-reap.sn-active{color:#c8a96e;border-color:rgba(200,169,110,0.3);background:rgba(200,169,110,0.07);}
 #site-nav .sn-links a.sn-trade.sn-active{color:#7faaff;border-color:rgba(127,170,255,0.3);background:rgba(127,170,255,0.07);}
+#site-nav .sn-links a.sn-dashboard.sn-active{color:#5cb85c;border-color:rgba(92,184,92,0.3);background:rgba(92,184,92,0.07);}
 #site-nav .sn-links a.sn-tourney.sn-active{color:#d4a8ff;border-color:rgba(212,168,255,0.3);background:rgba(212,168,255,0.07);}
 </style>
 <nav id="site-nav">
@@ -475,8 +513,10 @@
   <div class="sn-links">
     <a href="index.html" class="sn-home">Home</a>
     <a href="iron-arena.html" class="sn-arena">⚔ Iron Arena</a>
-       <a href="trade-together.html" class="sn-trade">📊 Trade Together</a>
-     </div>
+    <a href="reap-what-you-sow.html" class="sn-reap">🌾 Reap What You Sow</a>
+    <a href="trade-together.html" class="sn-trade">📊 Trade Together</a>
+    <a href="dashboard.html" class="sn-dashboard">◈ Dashboard</a>
+  </div>
 </nav>
 
 <!-- WALLET CONNECT GATE -->
@@ -527,6 +567,9 @@
     <span class="wallet-value" id="wallet-display">10,000</span>
     <span style="font-size:.72rem;color:var(--text-dim)">PvE</span>
   </div>
+  <button class="btn-rename" onclick="openRenameModal()">
+    ✎ <span id="tt-name-display">Trader</span>
+  </button>
   <div id="save-indicator" style="font-size:.58rem;color:rgba(201,169,110,.4);margin-top:3px;letter-spacing:1px">💾 Auto-saving</div>
   <div id="wallet-addr-display" style="font-size:.56rem;color:rgba(201,169,110,.35);margin-top:1px;font-family:monospace;letter-spacing:.5px"></div>
 </div>
@@ -654,6 +697,11 @@
       <div style="font-size:.68rem;color:var(--text-dim);letter-spacing:1px">P&amp;L Rankings</div>
     </div>
     <div id="lb-table-container"><div class="hist-empty"><div class="hist-empty-icon">&#127942;</div>No players yet.</div></div>
+    <div style="margin-top:16px;padding-top:14px;border-top:1px solid rgba(107,74,34,.3);text-align:center">
+      <button class="btn-rename" style="font-size:.88rem;padding:10px 28px;margin-top:0" onclick="openRenameModal()">
+        ✎ Change Display Name
+      </button>
+    </div>
   </div>
 </div>
 <!-- WARNING POPUP — too much position size -->
@@ -764,6 +812,19 @@
       <button class="modal-btn-short" id="modal-btn-short" onclick="openTrade('short')">▼ Short<br><span style="font-size:.65rem;opacity:.8">Profit if price falls</span></button>
     </div>
     <button class="modal-cancel" onclick="closeModal()">Cancel</button>
+  </div>
+</div>
+
+<div class="rename-overlay" id="rename-overlay">
+  <div class="rename-box">
+    <div class="rename-box-title">✎ Change Display Name</div>
+    <input class="rename-input" id="rename-input" type="text" maxlength="20"
+      placeholder="Enter new name…"
+      onkeydown="if(event.key==='Enter')confirmRename()"/>
+    <div class="rename-btns">
+      <button class="rename-btn-cancel" onclick="closeRenameModal()">Cancel</button>
+      <button class="rename-btn-save" onclick="confirmRename()">Save Name</button>
+    </div>
   </div>
 </div>
 
@@ -2595,6 +2656,44 @@ function walletToUsername(addr){
   return addr.slice(0,6)+'_'+addr.slice(-4);
 }
 
+// ── Display name helpers ──────────────────────────────────────────
+function _nameKey(addr){ return 'tt-name:'+(addr||'').toLowerCase(); }
+function getSavedName(addr){ try{ return localStorage.getItem(_nameKey(addr))||''; }catch(e){ return ''; } }
+function setSavedName(addr,name){ try{ localStorage.setItem(_nameKey(addr),name); }catch(e){} }
+
+function _resolveUsername(addr){
+  var saved = getSavedName(addr);
+  return saved || walletToUsername(addr);
+}
+
+function _updateNameDisplay(){
+  var el = document.getElementById('tt-name-display');
+  if(el) el.textContent = myUsername || 'Trader';
+}
+
+function openRenameModal(){
+  var input = document.getElementById('rename-input');
+  if(input){ input.value = myUsername || ''; input.focus(); input.select(); }
+  document.getElementById('rename-overlay').classList.add('open');
+}
+
+function closeRenameModal(){
+  document.getElementById('rename-overlay').classList.remove('open');
+}
+
+function confirmRename(){
+  var input = document.getElementById('rename-input');
+  var name = (input ? input.value : '').replace(/[^a-zA-Z0-9_ ]/g,'').trim();
+  if(!name){ showToast('Name cannot be empty', 'error'); return; }
+  myUsername = name;
+  setSavedName(myWalletAddress, name);
+  sessionStorage.setItem('tt_username', name);
+  _updateNameDisplay();
+  closeRenameModal();
+  showToast('Display name updated to "'+name+'"', 'tp-hit');
+  saveState().catch(function(){});
+}
+
 // ── Zero-dependency window.ethereum wallet connect ─────────────
 // No esm.sh / CDN imports — no ad-blocker issues.
 // Works with MetaMask and any EIP-1193 injected wallet.
@@ -2604,8 +2703,10 @@ async function _handleTTConnect(addr){
   myWalletAddress = addr;
   // Priority: gate name input → wallet-derived default
   var gateInput = (document.getElementById('gate-name-input')?.value || '').replace(/[^a-zA-Z0-9_ ]/g,'').trim();
-  myUsername = gateInput || walletToUsername(addr);
+  myUsername = gateInput || _resolveUsername(addr);
+  if(gateInput) setSavedName(addr, gateInput);
   sessionStorage.setItem('tt_username', myUsername);
+  _updateNameDisplay();
   sessionStorage.setItem('tt_wallet', myWalletAddress);
   // Write shared ecosystem key so other PvE apps auto-boot
   try {
@@ -2682,6 +2783,7 @@ function enterGame(){
     window.addEventListener('resize', function(){ renderMarket(); });
     var a=document.getElementById('wallet-addr-display');
     if(a&&myWalletAddress)a.textContent=fmtWallet(myWalletAddress);
+    _updateNameDisplay();
     if(!restored) showToast('Welcome, '+myUsername+'! 10,000 PvE ready.','tp-hit');
     else showToast('Welcome back, '+myUsername+'!','tp-hit');
   });
@@ -2903,9 +3005,10 @@ window.addEventListener('load', function(){
   if(_sharedWallet && _sharedWallet.address){
     // Already connected via another PvE app — boot straight in
     myWalletAddress = _sharedWallet.address;
-    myUsername = walletToUsername(myWalletAddress);
+    myUsername = _resolveUsername(myWalletAddress);
     sessionStorage.setItem('tt_username', myUsername);
     sessionStorage.setItem('tt_wallet', myWalletAddress);
+    _updateNameDisplay();
     var msg = document.getElementById('cd-msg');
     if(msg) msg.textContent = '✓ Welcome back, '+myUsername;
     setTimeout(enterGame, 600);
