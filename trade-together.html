@@ -467,7 +467,9 @@
 #site-nav .sn-links a:hover{color:#e8e6f0;border-color:rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);}
 #site-nav .sn-links a.sn-active{color:#e8e6f0;border-color:rgba(255,255,255,0.12);background:rgba(255,255,255,0.06);}
 #site-nav .sn-links a.sn-arena.sn-active{color:#e06c6c;border-color:rgba(224,108,108,0.3);background:rgba(224,108,108,0.07);}
+#site-nav .sn-links a.sn-reap.sn-active{color:#c8a96e;border-color:rgba(200,169,110,0.3);background:rgba(200,169,110,0.07);}
 #site-nav .sn-links a.sn-trade.sn-active{color:#7faaff;border-color:rgba(127,170,255,0.3);background:rgba(127,170,255,0.07);}
+#site-nav .sn-links a.sn-dashboard.sn-active{color:#5cb85c;border-color:rgba(92,184,92,0.3);background:rgba(92,184,92,0.07);}
 #site-nav .sn-links a.sn-tourney.sn-active{color:#d4a8ff;border-color:rgba(212,168,255,0.3);background:rgba(212,168,255,0.07);}
 </style>
 <nav id="site-nav">
@@ -475,7 +477,9 @@
   <div class="sn-links">
     <a href="index.html" class="sn-home">Home</a>
     <a href="iron-arena.html" class="sn-arena">⚔ Iron Arena</a>
+    <a href="reap-what-you-sow.html" class="sn-reap">🌾 Reap What You Sow</a>
     <a href="trade-together.html" class="sn-trade">📊 Trade Together</a>
+    <a href="dashboard.html" class="sn-dashboard">◈ Dashboard</a>
   </div>
 </nav>
 
@@ -487,19 +491,14 @@
     <div class="gate-subtitle">Leveraged Commodity Exchange</div>
     <div class="gate-cd-msg" id="cd-msg" style="min-height:22px"></div>
     <hr class="gate-divider">
-    <div class="gate-reg-note">Connect your Ethereum wallet to enter the tournament.</div>
-    <div style="margin-bottom:12px;">
-      <input id="gate-name-input" type="text" maxlength="20" placeholder="Display name (optional)"
-        style="width:100%;background:rgba(0,0,0,0.35);border:1px solid rgba(201,168,76,0.3);color:#f0e8d8;
-               font-family:'Cinzel',serif;font-size:0.82rem;padding:10px 12px;border-radius:6px;
-               outline:none;letter-spacing:0.05em;text-align:center;box-sizing:border-box;"
-        oninput="this.value=this.value.replace(/[^a-zA-Z0-9_ ]/g,'')"
-        onkeydown="if(event.key==='Enter')connectWallet()"/>
-      <div style="font-size:0.6rem;color:rgba(201,168,76,0.4);margin-top:5px;letter-spacing:0.08em;text-align:center;">
-        Letters, numbers, spaces only · 20 chars max
-      </div>
-    </div>
+    <div class="gate-reg-note">Connect your Ethereum wallet to enter the exchange.</div>
     <div class="gate-btn-row" style="flex-direction:column;gap:10px">
+      <div style="display:flex;flex-direction:column;gap:4px">
+        <label style="font-size:.65rem;letter-spacing:.08em;color:var(--text-dim);text-transform:uppercase">Display Name <span style="opacity:.5">(optional)</span></label>
+        <input id="gate-name-input" type="text" maxlength="20" placeholder="Leave blank to use wallet address"
+          style="background:rgba(255,255,255,0.05);border:1px solid rgba(201,169,110,0.2);border-radius:6px;color:var(--text-main);font-size:.82rem;padding:8px 12px;outline:none;width:100%;font-family:inherit;"
+          onkeydown="if(event.key==='Enter')connectWallet()"/>
+      </div>
       <button class="gate-btn gate-btn-primary" id="btn-connect-wallet" onclick="connectWallet()">&#128274; Connect Wallet</button>
       <div id="gate-wallet-status" style="font-size:.68rem;color:var(--text-dim);text-align:center;min-height:18px;letter-spacing:.5px"></div>
     </div>
@@ -534,10 +533,6 @@
   </div>
   <div id="save-indicator" style="font-size:.58rem;color:rgba(201,169,110,.4);margin-top:3px;letter-spacing:1px">💾 Auto-saving</div>
   <div id="wallet-addr-display" style="font-size:.56rem;color:rgba(201,169,110,.35);margin-top:1px;font-family:monospace;letter-spacing:.5px"></div>
-  <div style="margin-top:8px;display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap;">
-    <span id="tt-name-display" style="font-size:.78rem;color:rgba(201,169,110,.85);letter-spacing:.08em;font-family:'Cinzel',serif;"></span>
-    <button onclick="openRenameModal()" style="font-size:.72rem;color:#c9a84c;background:linear-gradient(135deg,rgba(201,168,76,.12),rgba(201,168,76,.05));border:1px solid rgba(201,168,76,.4);border-radius:6px;padding:7px 16px;cursor:pointer;font-family:'Cinzel',serif;letter-spacing:.1em;transition:all .2s;box-shadow:0 0 12px rgba(201,168,76,.1);" onmouseover="this.style.background='linear-gradient(135deg,rgba(201,168,76,.22),rgba(201,168,76,.1))';this.style.borderColor='rgba(201,168,76,.7)';this.style.boxShadow='0 0 20px rgba(201,168,76,.25)'" onmouseout="this.style.background='linear-gradient(135deg,rgba(201,168,76,.12),rgba(201,168,76,.05))';this.style.borderColor='rgba(201,168,76,.4)';this.style.boxShadow='0 0 12px rgba(201,168,76,.1)'">✎ RENAME</button>
-  </div>
 </div>
 
 <div class="tabs">
@@ -662,17 +657,6 @@
       <div class="section-title">&#127942; Leaderboard</div>
       <div style="font-size:.68rem;color:var(--text-dim);letter-spacing:1px">P&amp;L Rankings</div>
     </div>
-
-    <!-- Name input on leaderboard -->
-    <div style="background:rgba(201,168,76,.05);border:1px solid rgba(201,168,76,.18);border-radius:10px;padding:14px 16px;margin-bottom:16px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-      <span style="font-family:'Cinzel',serif;font-size:.68rem;letter-spacing:.12em;color:rgba(201,168,76,.7);white-space:nowrap;">YOUR NAME</span>
-      <input id="lb-name-input" type="text" maxlength="20" placeholder="Set display name…"
-        style="flex:1;min-width:120px;background:rgba(0,0,0,0.3);border:1px solid rgba(201,168,76,.25);color:#f0e8d8;font-family:'Cinzel',serif;font-size:.78rem;padding:8px 12px;border-radius:6px;outline:none;letter-spacing:.04em;"
-        oninput="this.value=this.value.replace(/[^a-zA-Z0-9_ ]/g,'')"
-        onkeydown="if(event.key==='Enter')applyLbName()"/>
-      <button onclick="applyLbName()" style="background:linear-gradient(135deg,rgba(201,168,76,.18),rgba(201,168,76,.07));border:1px solid rgba(201,168,76,.45);color:#c9a84c;font-family:'Cinzel',serif;font-size:.72rem;letter-spacing:.1em;padding:8px 18px;border-radius:6px;cursor:pointer;white-space:nowrap;transition:all .2s;" onmouseover="this.style.borderColor='rgba(201,168,76,.8)';this.style.boxShadow='0 0 14px rgba(201,168,76,.2)'" onmouseout="this.style.borderColor='rgba(201,168,76,.45)';this.style.boxShadow='none'">SAVE</button>
-    </div>
-
     <div id="lb-table-container"><div class="hist-empty"><div class="hist-empty-icon">&#127942;</div>No players yet.</div></div>
   </div>
 </div>
@@ -784,25 +768,6 @@
       <button class="modal-btn-short" id="modal-btn-short" onclick="openTrade('short')">▼ Short<br><span style="font-size:.65rem;opacity:.8">Profit if price falls</span></button>
     </div>
     <button class="modal-cancel" onclick="closeModal()">Cancel</button>
-  </div>
-</div>
-
-<!-- RENAME MODAL -->
-<div id="rename-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:9999;align-items:center;justify-content:center;padding:16px;">
-  <div style="background:#1a1008;border:1px solid rgba(201,168,76,0.35);border-radius:10px;width:100%;max-width:320px;padding:28px 24px;font-family:'Cinzel',serif;text-align:center;">
-    <div style="font-size:1.1rem;color:#c9a84c;letter-spacing:.15em;margin-bottom:6px;">✎ CHANGE NAME</div>
-    <div style="font-size:.65rem;color:rgba(201,168,76,.45);letter-spacing:.08em;margin-bottom:18px;">Shown on leaderboard &amp; live trades</div>
-    <input id="rename-input" type="text" maxlength="20" placeholder="Enter display name…"
-      style="width:100%;background:rgba(0,0,0,0.4);border:1px solid rgba(201,168,76,0.35);color:#f0e8d8;
-             font-family:'Cinzel',serif;font-size:.88rem;padding:11px 14px;border-radius:6px;
-             outline:none;letter-spacing:.05em;text-align:center;box-sizing:border-box;margin-bottom:6px;"
-      oninput="this.value=this.value.replace(/[^a-zA-Z0-9_ ]/g,'')"
-      onkeydown="if(event.key==='Enter')confirmRename();if(event.key==='Escape')closeRenameModal()"/>
-    <div style="font-size:.58rem;color:rgba(201,168,76,.35);margin-bottom:18px;letter-spacing:.06em;">Letters, numbers, spaces · 20 chars max</div>
-    <div style="display:flex;gap:10px;">
-      <button onclick="closeRenameModal()" style="flex:1;background:transparent;border:1px solid rgba(255,255,255,.12);color:rgba(255,255,255,.4);font-family:'Cinzel',serif;font-size:.75rem;padding:10px;border-radius:6px;cursor:pointer;letter-spacing:.08em;">CANCEL</button>
-      <button onclick="confirmRename()" style="flex:1;background:linear-gradient(135deg,rgba(201,168,76,.15),rgba(201,168,76,.06));border:1px solid rgba(201,168,76,.5);color:#c9a84c;font-family:'Cinzel',serif;font-size:.75rem;padding:10px;border-radius:6px;cursor:pointer;letter-spacing:.08em;">SAVE NAME</button>
-    </div>
   </div>
 </div>
 
@@ -2628,138 +2593,36 @@ function forceTournamentClose(){
 function fmtWallet(a){if(!a)return '';if(a.length<=12)return a;return a.slice(0,6)+'\u2026'+a.slice(-4);}
 function safeKey(s){return s.replace(/[^a-zA-Z0-9_-]/g,'_');}
 
-// ── Display name — stored per wallet in localStorage ──────────────
-function _nameKey(addr){ return 'tt-name:' + (addr||'').toLowerCase(); }
-
-function getSavedName(addr){
-  try { return localStorage.getItem(_nameKey(addr)) || ''; } catch(e){ return ''; }
-}
-function setSavedName(addr, name){
-  try { localStorage.setItem(_nameKey(addr), name); } catch(e){}
-}
-
 // Derive a display username from wallet address: "0x1234…abcd"
 function walletToUsername(addr){
   if(!addr)return 'Trader';
   return addr.slice(0,6)+'_'+addr.slice(-4);
 }
 
-function _resolveUsername(addr){
-  var saved = getSavedName(addr);
-  return saved || walletToUsername(addr);
-}
-
-function _updateNameDisplay(){
-  var el = document.getElementById('tt-name-display');
-  if(el) el.textContent = myUsername || '';
-}
-
-// ── Rename modal ──────────────────────────────────────────────────
-function openRenameModal(){
-  var overlay = document.getElementById('rename-overlay');
-  var input   = document.getElementById('rename-input');
-  if(!overlay) return;
-  overlay.style.display = 'flex';
-  if(input){ input.value = myUsername || ''; input.focus(); input.select(); }
-}
-function closeRenameModal(){
-  var overlay = document.getElementById('rename-overlay');
-  if(overlay) overlay.style.display = 'none';
-}
-function confirmRename(){
-  var input = document.getElementById('rename-input');
-  var name  = (input ? input.value.trim() : '').replace(/[^a-zA-Z0-9_ ]/g,'').trim();
-  if(!name){ showToast('Enter a name first','tp-loss'); return; }
-  myUsername = name;
-  setSavedName(myWalletAddress, name);
-  sessionStorage.setItem('tt_username', name);
-  _updateNameDisplay();
-  closeRenameModal();
-  showToast('Name updated to: ' + name, 'tp-hit');
-  saveState(); // push new name to leaderboard
-}
-
-// ── Web3Modal connect (any wallet, any chain) ─────────────────
-var _ttModal = null, _ttWagmiConfig = null;
-
-async function _bootTTModal(){
-  if(_ttModal) return;
-  try {
-    const [w3m, wagmiChains, wagmiCore] = await Promise.all([
-      import('https://esm.sh/@web3modal/wagmi@5'),
-      import('https://esm.sh/wagmi@2/chains'),
-      import('https://esm.sh/@wagmi/core@2'),
-    ]);
-    const { createWeb3Modal, defaultWagmiConfig } = w3m;
-    const { mainnet, optimism, base, polygon, arbitrum, bsc, avalanche } = wagmiChains;
-    const { reconnect, getAccount } = wagmiCore;
-    const chains = [optimism, mainnet, base, polygon, arbitrum, bsc, avalanche];
-    _ttWagmiConfig = defaultWagmiConfig({
-      chains, projectId: 'f914ed3c80a27cd3c8f0217ba6ddb0fe',
-      metadata: { name: 'PvE Hub — 2nd Tournament', url: window.location.origin, icons: [] }
-    });
-    reconnect(_ttWagmiConfig);
-    _ttModal = createWeb3Modal({
-      wagmiConfig: _ttWagmiConfig,
-      projectId: 'f914ed3c80a27cd3c8f0217ba6ddb0fe',
-      chains,
-      themeMode: 'dark',
-      themeVariables: { '--w3m-accent': '#c9a84c', '--w3m-border-radius-master': '4px' },
-      featuredWalletIds: [
-        'c57ca95b47569778a828d19178114f4db188b89b763c899ba0be274e97267d96',
-        'fd20dc426fb37566d803205b19bbc1d4096b248ac04548e3cfb6b3a38bd033aa',
-        '1ae92b26df02f0abca6304df07debccd18262fdf5fe82daa81593582dac9a369',
-        '4622a2b2d6af1c9844944291e5e7351a6aa24cd7b23099efac1b2fd875da31a0'
-      ]
-    });
-    _ttModal.subscribeEvents(async (event) => {
-      if(event.data.event === 'CONNECT_SUCCESS'){
-        var tries=0;
-        var iv = setInterval(async ()=>{
-          var acct = getAccount(_ttWagmiConfig);
-          if(acct && acct.address){ clearInterval(iv); await _handleTTConnect(acct.address); }
-          if(++tries > 20) clearInterval(iv);
-        }, 500);
-      }
-    });
-    // Check already connected
-    var acct = getAccount(_ttWagmiConfig);
-    if(acct && acct.address) await _handleTTConnect(acct.address);
-  } } catch(e){
-  console.error('TT Web3Modal boot failed:', e);
-  _ttModal = null;
-}
-}
+// ── Zero-dependency window.ethereum wallet connect ─────────────
+// No esm.sh / CDN imports — no ad-blocker issues.
+// Works with MetaMask and any EIP-1193 injected wallet.
 
 async function _handleTTConnect(addr){
-  var btn = document.getElementById('btn-connect-wallet');
   var status = document.getElementById('gate-wallet-status');
   myWalletAddress = addr;
-
-  // Priority: gate input → localStorage saved name → wallet-derived default
+  // Priority: gate name input → wallet-derived default
   var gateInput = (document.getElementById('gate-name-input')?.value || '').replace(/[^a-zA-Z0-9_ ]/g,'').trim();
-  if(gateInput){
-    myUsername = gateInput;
-    setSavedName(addr, gateInput);
-  } else {
-    myUsername = _resolveUsername(addr);
-  }
-
+  myUsername = gateInput || walletToUsername(addr);
   sessionStorage.setItem('tt_username', myUsername);
   sessionStorage.setItem('tt_wallet', myWalletAddress);
-  // Write to shared ecosystem key
+  // Write shared ecosystem key so other PvE apps auto-boot
   try {
     var existing = JSON.parse(localStorage.getItem('pve-wallet-v1')||'null');
-    if(!existing || existing.address?.toLowerCase() !== addr.toLowerCase()){
+    if(!existing || (existing.address||'').toLowerCase() !== addr.toLowerCase()){
       localStorage.setItem('pve-wallet-v1', JSON.stringify({
         uid: 'w_'+addr.slice(2,10)+Date.now().toString(36),
         address: addr, displayName: addr.slice(0,6)+'…'+addr.slice(-4), skin: '🏆'
       }));
     }
   } catch(e){}
-  // Set Firebase private storage address
   window._ttUserAddr = addr;
-  // Register in Firebase
+  // Register in Firebase if first time
   try {
     var userKey = safeKey(myUsername.toLowerCase());
     var existing2 = await fbGet('trade/accounts/'+userKey);
@@ -2772,59 +2635,40 @@ async function _handleTTConnect(addr){
   if(status){ status.style.color='#7fffc4'; status.textContent='✓ Connected: '+fmtWallet(addr); }
   setTimeout(enterGame, 500);
 }
+
 async function connectWallet(){
   var btn = document.getElementById('btn-connect-wallet');
   var status = document.getElementById('gate-wallet-status');
-
-  if(btn){ btn.disabled=true; btn.textContent='⏳ Loading…'; }
+  if(btn){ btn.disabled=true; btn.textContent='⏳ Connecting…'; }
   if(status) status.textContent='';
 
-  // Retry modal boot
-  for (let i = 0; i < 2 && !_ttModal; i++) {
-    await _bootTTModal();
+  var eth = window.ethereum;
+  if(!eth){
+    if(status){ status.style.color='#ff9999'; status.textContent='No wallet detected. Install MetaMask to continue.'; }
+    if(btn){ btn.disabled=false; btn.textContent='🔒 Connect Wallet'; }
+    return;
   }
-
-  // Try Web3Modal first
-  if (_ttModal) {
-    try {
-      if(btn){ btn.disabled=false; btn.textContent='🔒 Connect Wallet'; }
-      _ttModal.open();
-      return;
-    } catch (e) {
-      console.error('Modal open failed:', e);
-    }
-  }
-
-  // 🔥 FALLBACK: MetaMask direct
-  if (window.ethereum) {
-    try {
-      const accounts = await window.ethereum.request({
-        method: 'eth_requestAccounts'
-      });
-
-      await _handleTTConnect(accounts[0]);
-      return;
-
-    } catch (e) {
-      console.error('MetaMask failed:', e);
-    }
-  }
-
-  // Final failure
-  if(status){
-    status.style.color='#ff9999';
-    status.textContent='Wallet connection failed. Try MetaMask or refresh.';
-  }
-
-  if(btn){
-    btn.disabled=false;
-    btn.textContent='🔒 Connect Wallet';
+  try {
+    var accounts = await eth.request({ method: 'eth_requestAccounts' });
+    if(accounts && accounts[0]) await _handleTTConnect(accounts[0]);
+  } catch(e){
+    var msg = e.code === 4001 ? 'Connection cancelled.' : 'Connection failed — try again.';
+    if(status){ status.style.color='#ff9999'; status.textContent=msg; }
+    if(btn){ btn.disabled=false; btn.textContent='🔒 Connect Wallet'; }
   }
 }
 
-
-
-
+// Listen for account switches in MetaMask
+(function(){
+  var eth = window.ethereum;
+  if(!eth) return;
+  eth.on('accountsChanged', async function(accounts){
+    if(accounts && accounts[0] && myWalletAddress &&
+       accounts[0].toLowerCase() !== myWalletAddress.toLowerCase()){
+      await _handleTTConnect(accounts[0]);
+    }
+  });
+})();
 
 function enterGame(){
   tournamentWarnFired = false;
@@ -2842,7 +2686,6 @@ function enterGame(){
     window.addEventListener('resize', function(){ renderMarket(); });
     var a=document.getElementById('wallet-addr-display');
     if(a&&myWalletAddress)a.textContent=fmtWallet(myWalletAddress);
-    _updateNameDisplay();
     if(!restored) showToast('Welcome, '+myUsername+'! 10,000 PvE ready.','tp-hit');
     else showToast('Welcome back, '+myUsername+'!','tp-hit');
   });
@@ -3015,19 +2858,6 @@ async function renderLiveTrades(){
   }catch(e){con.innerHTML='<div class="hist-empty"><div class="hist-empty-icon">&#128225;</div>Could not load live trades.</div>';console.warn(e);}
 }
 
-// ── Apply name from leaderboard input ────────────────────────────
-function applyLbName(){
-  var input = document.getElementById('lb-name-input');
-  var name  = (input ? input.value.trim() : '').replace(/[^a-zA-Z0-9_ ]/g,'').trim();
-  if(!name){ showToast('Enter a name first','tp-loss'); return; }
-  myUsername = name;
-  setSavedName(myWalletAddress, name);
-  sessionStorage.setItem('tt_username', name);
-  _updateNameDisplay();
-  showToast('Name updated to: ' + name, 'tp-hit');
-  saveState().then(renderLeaderboard);
-}
-
 async function renderLeaderboard(){
   var con=document.getElementById('lb-table-container');
   if(!con)return;
@@ -3064,15 +2894,10 @@ function showPage(name){
   var idx=pages.indexOf(name);if(idx>=0)document.querySelectorAll('.tab')[idx].classList.add('active');
   if(name==='history')renderHistory();
   if(name==='livetrades'){saveState().then(renderLiveTrades);}
-  if(name==='leaderboard'){
-    var lbInput = document.getElementById('lb-name-input');
-    if(lbInput && myUsername) lbInput.value = myUsername;
-    saveState().then(renderLeaderboard);
-  }
+  if(name==='leaderboard'){saveState().then(renderLeaderboard);}
 }
 
 window.addEventListener('load', function(){
-  _bootTTModal();
   // If wallet was previously connected this session, auto-restore silently
   var savedUser   = sessionStorage.getItem('tt_username');
   // Auto-boot: check shared ecosystem wallet key first, then sessionStorage fallback
@@ -3082,7 +2907,7 @@ window.addEventListener('load', function(){
   if(_sharedWallet && _sharedWallet.address){
     // Already connected via another PvE app — boot straight in
     myWalletAddress = _sharedWallet.address;
-    myUsername = _resolveUsername(myWalletAddress);
+    myUsername = walletToUsername(myWalletAddress);
     sessionStorage.setItem('tt_username', myUsername);
     sessionStorage.setItem('tt_wallet', myWalletAddress);
     var msg = document.getElementById('cd-msg');
