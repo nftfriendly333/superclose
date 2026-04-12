@@ -2725,7 +2725,10 @@ async function _bootTTModal(){
     // Check already connected
     var acct = getAccount(_ttWagmiConfig);
     if(acct && acct.address) await _handleTTConnect(acct.address);
-  } catch(e){ console.error('TT Web3Modal boot failed:', e); }
+  } } catch(e){
+  console.error('TT Web3Modal boot failed:', e);
+  _ttModal = null;
+}
 }
 
 async function _handleTTConnect(addr){
@@ -2769,24 +2772,59 @@ async function _handleTTConnect(addr){
   if(status){ status.style.color='#7fffc4'; status.textContent='✓ Connected: '+fmtWallet(addr); }
   setTimeout(enterGame, 500);
 }
-
 async function connectWallet(){
   var btn = document.getElementById('btn-connect-wallet');
   var status = document.getElementById('gate-wallet-status');
+
   if(btn){ btn.disabled=true; btn.textContent='⏳ Loading…'; }
   if(status) status.textContent='';
-  if(!_ttModal) await _bootTTModal();
-  if(_ttModal){
-    if(btn){ btn.disabled=false; btn.textContent='🔒 Connect Wallet'; }
-    _ttModal.open();
-  } else {
-    if(status){ status.style.color='#ff9999'; status.textContent='Could not load wallet modal. Check your connection.'; }
-    if(btn){ btn.disabled=false; btn.textContent='🔒 Connect Wallet'; }
+
+  // Retry modal boot
+  for (let i = 0; i < 2 && !_ttModal; i++) {
+    await _bootTTModal();
+  }
+
+  // Try Web3Modal first
+  if (_ttModal) {
+    try {
+      if(btn){ btn.disabled=false; btn.textContent='🔒 Connect Wallet'; }
+      _ttModal.open();
+      return;
+    } catch (e) {
+      console.error('Modal open failed:', e);
+    }
+  }
+
+  // 🔥 FALLBACK: MetaMask direct
+  if (window.ethereum) {
+    try {
+      const accounts = await window.ethereum.request({
+        method: 'eth_requestAccounts'
+      });
+
+      await _handleTTConnect(accounts[0]);
+      return;
+
+    } catch (e) {
+      console.error('MetaMask failed:', e);
+    }
+  }
+
+  // Final failure
+  if(status){
+    status.style.color='#ff9999';
+    status.textContent='Wallet connection failed. Try MetaMask or refresh.';
+  }
+
+  if(btn){
+    btn.disabled=false;
+    btn.textContent='🔒 Connect Wallet';
   }
 }
 
-// Boot modal in background immediately
-_bootTTModal();
+
+
+
 
 function enterGame(){
   tournamentWarnFired = false;
@@ -3034,6 +3072,7 @@ function showPage(name){
 }
 
 window.addEventListener('load', function(){
+  _bootTTModal();
   // If wallet was previously connected this session, auto-restore silently
   var savedUser   = sessionStorage.getItem('tt_username');
   // Auto-boot: check shared ecosystem wallet key first, then sessionStorage fallback
