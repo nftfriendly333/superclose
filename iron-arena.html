@@ -3576,24 +3576,36 @@ function closeLeaderboard() {
 // SAVE / LOAD — Firebase only, keyed to wallet address
 // ============================================================
 
-async function _arenaStorageKey() {
-  const p = PveAuth.getProfile();
-  return p ? 'arena-save:' + (p.address || '').toLowerCase() : null;
+// ── Save key helpers (mirrors Trade Together's _ttLocalKey pattern) ──
+function _arenaLocalKey() {
+  return shopState.walletAddress
+    ? 'arena:' + shopState.walletAddress.toLowerCase()
+    : 'arena:guest';
+}
+
+function _saveLocal(data) {
+  try { localStorage.setItem(_arenaLocalKey(), JSON.stringify(data)); } catch(e) {}
+}
+
+function _loadLocal() {
+  try {
+    const raw = localStorage.getItem(_arenaLocalKey());
+    return raw ? JSON.parse(raw) : null;
+  } catch(e) { return null; }
 }
 
 async function saveGame() {
-  const key = await _arenaStorageKey();
-  if (!key || !window.storage) {
+  if (!shopState.walletAddress) {
     showSaveToast('⚠ Connect wallet to save', '#e74c3c');
     return;
   }
   const data = {
-    skills:       state.skills,
-    skillClicks:  state.skillClicks,
-    totalXP:      state.totalXP,
-    lifetimeXP:   state.lifetimeXP,
+    skills:          state.skills,
+    skillClicks:     state.skillClicks,
+    totalXP:         state.totalXP,
+    lifetimeXP:      state.lifetimeXP,
     enemiesDefeated: state.enemiesDefeated,
-    wave:         state.wave,
+    wave:            state.wave,
     shop: {
       heroName:          shopState.heroName,
       nameChangeCount:   shopState.nameChangeCount,
@@ -3610,88 +3622,98 @@ async function saveGame() {
     potions: {
       poisonOwned: potionState.poison.owned,
       missOwned:   potionState.miss.owned,
-    }
+    },
+    savedAt: Date.now(),
   };
-  try {
-    console.log('[Iron Arena] saveGame: writing to', key);
-    await window.storage.set(key, JSON.stringify(data), false);
-    console.log('[Iron Arena] saveGame: success');
-    showSaveToast('✔ Progress saved!', '#27ae60');
-    submitLeaderboardScore();
-  } catch(e) {
-    showSaveToast('⚠ Save failed', '#e74c3c');
+
+  // Layer 1: localStorage — instant, survives refresh, no dependencies
+  _saveLocal(data);
+
+  // Layer 2: window.storage / PveStorage (wallet-keyed Firebase)
+  if (window.storage && shopState.walletAddress && !window.storage._isStub) {
+    const cloudKey = 'arena-save:' + shopState.walletAddress.toLowerCase();
+    try { await window.storage.set(cloudKey, JSON.stringify(data), false); } catch(e) {}
   }
+
+  // Layer 3: Firebase REST leaderboard
+  submitLeaderboardScore();
+
+  showSaveToast('✔ Progress saved!', '#27ae60');
 }
 
 async function loadGame() {
   try {
-    const key = await _arenaStorageKey();
-    if (!key || !window.storage) {
-      console.warn('[Iron Arena] loadGame: no key or storage — wallet connected?', { key, storage: !!window.storage });
-      return false;
-    }
-    console.log('[Iron Arena] loadGame: fetching', key);
-    const r = await window.storage.get(key, false);
-    if (!r) {
-      console.log('[Iron Arena] loadGame: no save found for this wallet (fresh start)');
-      return false;
-    }
-    console.log('[Iron Arena] loadGame: save found, restoring...');
-    const data = JSON.parse(r.value);
+    const addr = shopState.walletAddress;
 
-    // Restore state
-    Object.assign(state.skills,      data.skills      || {});
-    Object.assign(state.skillClicks, data.skillClicks || {});
-    state.totalXP          = data.totalXP          || 0;
-    state.lifetimeXP       = data.lifetimeXP       || state.totalXP; // fallback to totalXP for existing saves
-    state.enemiesDefeated  = data.enemiesDefeated  || 0;
-    state.wave             = data.wave             || 1;
-
-    // Restore shop
-    if (data.shop) {
-      shopState.heroName          = data.shop.heroName          || '';
-      shopState.nameChangeCount   = data.shop.nameChangeCount   || 0;
-      shopState.equippedSkin      = data.shop.equippedSkin      || 0;
-      shopState.ownedSkins        = data.shop.ownedSkins        || [0];
-      shopState.oneStrikeUnlocked = data.shop.oneStrikeUnlocked || false;
-      shopState.walletAddress     = data.shop.walletAddress     || '';
+    // Layer 2: window.storage / PveStorage (cloud, most authoritative)
+    if (window.storage && addr && !window.storage._isStub) {
+      try {
+        const cloudKey = 'arena-save:' + addr.toLowerCase();
+        const r = await window.storage.get(cloudKey, false);
+        if (r) {
+          const data = JSON.parse(r.value);
+          if (data && typeof data.wave === 'number') {
+            _applyLoadedData(data);
+            _saveLocal(data); // keep local in sync
+            return true;
+          }
+        }
+      } catch(e) {}
     }
 
-    // Apply hero name
-    if (shopState.heroName) {
-      const nameEl = document.querySelector('.combatant-name');
-      if (nameEl) nameEl.textContent = shopState.heroName.toUpperCase();
-      document.getElementById('name-cost-label').textContent = 'Rename costs 10 XP';
+    // Layer 1: localStorage fallback
+    const ls = _loadLocal();
+    if (ls && typeof ls.wave === 'number') {
+      _applyLoadedData(ls);
+      return true;
     }
 
-    // Apply equipped skin
-    if (shopState.equippedSkin > 0) {
-      document.getElementById('player-sprite').textContent = SKINS[shopState.equippedSkin].emoji;
-    }
-
-    // Restore guild membership
-    if (data.guild?.code) {
-      guildState.myGuildCode = data.guild.code;
-      guildState.myGuildName = data.guild.name;
-      guildState.isLeader    = data.guild.isLeader || false;
-      saveGuildLocally();
-    }
-    if (data.potions) {
-      potionState.poison.owned = data.potions.poisonOwned || false;
-      potionState.miss.owned   = data.potions.missOwned   || false;
-    }
-
-    // Update wave / enemy count display
-    document.getElementById('wave-num').textContent = state.wave;
-    document.getElementById('enemy-count').textContent = state.enemiesDefeated;
-    document.getElementById('btn-fight').textContent = state.wave > 1
-      ? `⚔ CHALLENGE WAVE ${state.wave}` : '⚔ ENTER THE ARENA';
-
-    return true;
+    return false;
   } catch(e) {
-    console.warn('Load failed:', e);
+    console.warn('loadGame error:', e);
     return false;
   }
+}
+
+function _applyLoadedData(data) {
+  Object.assign(state.skills,      data.skills      || {});
+  Object.assign(state.skillClicks, data.skillClicks || {});
+  state.totalXP          = data.totalXP          || 0;
+  state.lifetimeXP       = data.lifetimeXP       || state.totalXP;
+  state.enemiesDefeated  = data.enemiesDefeated  || 0;
+  state.wave             = data.wave             || 1;
+
+  if (data.shop) {
+    shopState.heroName          = data.shop.heroName          || '';
+    shopState.nameChangeCount   = data.shop.nameChangeCount   || 0;
+    shopState.equippedSkin      = data.shop.equippedSkin      || 0;
+    shopState.ownedSkins        = data.shop.ownedSkins        || [0];
+    shopState.oneStrikeUnlocked = data.shop.oneStrikeUnlocked || false;
+    if (data.shop.walletAddress) shopState.walletAddress = data.shop.walletAddress;
+  }
+  if (shopState.heroName) {
+    const nameEl = document.querySelector('.combatant-name');
+    if (nameEl) nameEl.textContent = shopState.heroName.toUpperCase();
+    const costEl = document.getElementById('name-cost-label');
+    if (costEl) costEl.textContent = 'Rename costs 10 XP';
+  }
+  if (shopState.equippedSkin > 0) {
+    document.getElementById('player-sprite').textContent = SKINS[shopState.equippedSkin].emoji;
+  }
+  if (data.guild?.code) {
+    guildState.myGuildCode = data.guild.code;
+    guildState.myGuildName = data.guild.name;
+    guildState.isLeader    = data.guild.isLeader || false;
+    saveGuildLocally();
+  }
+  if (data.potions) {
+    potionState.poison.owned = data.potions.poisonOwned || false;
+    potionState.miss.owned   = data.potions.missOwned   || false;
+  }
+  document.getElementById('wave-num').textContent    = state.wave;
+  document.getElementById('enemy-count').textContent = state.enemiesDefeated;
+  document.getElementById('btn-fight').textContent   = state.wave > 1
+    ? `⚔ CHALLENGE WAVE ${state.wave}` : '⚔ ENTER THE ARENA';
 }
 
 function deleteSave() {
@@ -3710,8 +3732,15 @@ function deleteSave() {
   );
   if (!second) return;
 
+  // Delete localStorage save
+  try { localStorage.removeItem(_arenaLocalKey()); } catch(e) {}
   // Delete cloud save
-  try { _arenaStorageKey().then(key => { if (key && window.storage) window.storage.delete(key, false); }); } catch {}
+  try {
+    const addr = shopState.walletAddress;
+    if (addr && window.storage && !window.storage._isStub) {
+      window.storage.delete('arena-save:' + addr.toLowerCase(), false).catch(() => {});
+    }
+  } catch(e) {}
 
   SKILLS.forEach(s => {
     state.skills[s]      = 1;
@@ -4460,7 +4489,7 @@ window.PveStorage = PveStorage;
 
 
 
-// Phase 1: Render game immediately so it's playable right away
+// Phase 1: Render game immediately — playable before any wallet check
 (function() {
   renderSkills();
   resetPlayerStats();
@@ -4469,86 +4498,120 @@ window.PveStorage = PveStorage;
   updateFightButtonWalletGate();
 })();
 
-// Phase 2: Auth + cloud save in background — doesn't block gameplay
-(async () => {
-  try {
-    await PveAuth.init('arena');
-    const profile = await PveAuth.requireLogin();
+// Boot: mirrors Trade Together's window.addEventListener('load') pattern.
+// Check pve-wallet-v1 first (shared ecosystem key), then sessionStorage fallback.
+// Never blocks gameplay — save loads silently in background.
+window.addEventListener('load', function() {
+  var _sharedWallet = null;
+  try { _sharedWallet = JSON.parse(localStorage.getItem('pve-wallet-v1') || 'null'); } catch(e) {}
 
-    // Set uid from profile
-    if (profile.uid || profile.address) {
-      shopState.walletAddress = profile.address || profile.uid || '';
-      // Explicitly install storage under wallet address BEFORE loading save
-      const storageKey = (profile.address || '').toLowerCase() || profile.uid || '';
-      if (typeof PveStorage !== 'undefined' && storageKey) PveStorage.install(storageKey);
-      renderWalletDisplay();
-      updateFightButtonWalletGate();
-    }
-
-    // Wait for Firebase to be ready before loading save
-    if (!window._fbReady) {
-      await new Promise(resolve => {
-        const check = setInterval(() => {
-          if (window._fbReady) { clearInterval(check); resolve(); }
-        }, 100);
-        setTimeout(() => { clearInterval(check); resolve(); }, 5000); // max 5s wait
-      });
-    }
-
-    // Load cloud save — overrides local defaults if save exists
-    const loaded = await loadGame();
-    if (loaded) {
-      renderSkills();
-      resetPlayerStats();
-      updateXPDisplay();
-      renderSkinGrid();
-      renderWalletDisplay();
-      updateFightButtonWalletGate();
-      showSaveToast('⚔ Progress restored!', '#7a5c1e');
-      claimGuildXP();
-    }
-
-    // Sync skin to profile
-    const _skinEmoji = SKINS[shopState.equippedSkin]?.emoji || '🧙';
-    await PveAuth.saveProfile({ skin: _skinEmoji });
-
-    // Firebase banner
-    setTimeout(() => {
-      const banner = document.getElementById('firebase-banner');
-      if (banner && window._fbReady) {
-        banner.classList.add('connected');
-        banner.innerHTML = '<span class="fb-icon">✅</span><strong>Firebase connected</strong> — Leaderboard & Guilds are live!';
-      }
-    }, 1500);
-
-  } catch(e) {
-    // Auth failed or cancelled — game still playable, just no cloud save
-    console.warn('PvE Auth:', e?.message || e);
+  if (_sharedWallet && _sharedWallet.address) {
+    // Already connected via another PvE app — boot straight in
+    shopState.walletAddress = _sharedWallet.address;
+    sessionStorage.setItem('arena_wallet', _sharedWallet.address);
+    const storageKey = _sharedWallet.address.toLowerCase();
+    if (typeof PveStorage !== 'undefined') PveStorage.install(storageKey);
+    renderWalletDisplay();
+    updateFightButtonWalletGate();
+    _bootLoadSave(_sharedWallet.address);
+    return;
   }
-})();
+
+  // Fall back to sessionStorage (same-tab reload)
+  var savedWallet = sessionStorage.getItem('arena_wallet');
+  if (savedWallet) {
+    shopState.walletAddress = savedWallet;
+    const storageKey = savedWallet.toLowerCase();
+    if (typeof PveStorage !== 'undefined') PveStorage.install(storageKey);
+    renderWalletDisplay();
+    updateFightButtonWalletGate();
+    _bootLoadSave(savedWallet);
+    return;
+  }
+
+  // No cached wallet — init PveAuth silently (won't prompt, just checks MetaMask)
+  (async () => {
+    try {
+      await PveAuth.init('arena');
+      const profile = PveAuth.getProfile();
+      if (profile && profile.address) {
+        shopState.walletAddress = profile.address;
+        sessionStorage.setItem('arena_wallet', profile.address);
+        if (typeof PveStorage !== 'undefined') PveStorage.install(profile.address.toLowerCase());
+        renderWalletDisplay();
+        updateFightButtonWalletGate();
+        _bootLoadSave(profile.address);
+      }
+    } catch(e) {}
+  })();
+});
+
+async function _bootLoadSave(addr) {
+  // Wait for Firebase (up to 5s), then load save
+  if (!window._fbReady) {
+    await new Promise(resolve => {
+      const check = setInterval(() => {
+        if (window._fbReady) { clearInterval(check); resolve(); }
+      }, 100);
+      setTimeout(() => { clearInterval(check); resolve(); }, 5000);
+    });
+  }
+  const loaded = await loadGame().catch(() => false);
+  if (loaded) {
+    renderSkills();
+    resetPlayerStats();
+    updateXPDisplay();
+    renderSkinGrid();
+    renderWalletDisplay();
+    updateFightButtonWalletGate();
+    showSaveToast('⚔ Progress restored!', '#7a5c1e');
+    claimGuildXP();
+  }
+  const _skinEmoji = SKINS[shopState.equippedSkin]?.emoji || '🧙';
+  PveAuth.saveProfile({ skin: _skinEmoji }).catch(() => {});
+  setTimeout(() => {
+    const banner = document.getElementById('firebase-banner');
+    if (banner && window._fbReady) {
+      banner.classList.add('connected');
+      banner.innerHTML = '<span class="fb-icon">✅</span><strong>Firebase connected</strong> — Leaderboard & Guilds are live!';
+    }
+  }, 1500);
+}
 
 // ── Wallet switch handler ──────────────────────────────────────────
-// Fires whenever the user connects a different wallet via Web3Modal
-// without a full page reload. Resets identity and loads the new
-// wallet's save data so XP / wave data goes to the right account.
 PveAuth.onLogin(async (profile) => {
   const newAddr = (profile.address || '').toLowerCase();
   if (!newAddr) return;
 
-  // If it's the same wallet that just re-authenticated, do nothing
   const currentAddr = (shopState.walletAddress || '').toLowerCase();
-  if (newAddr === currentAddr && state.totalXP > 0) return;
+  // Use localStorage to detect same wallet on fresh load (shopState may be empty)
+  const savedAddr = (() => {
+    try {
+      const raw = localStorage.getItem('arena:' + currentAddr);
+      const d = raw ? JSON.parse(raw) : null;
+      return (d?.shop?.walletAddress || '').toLowerCase();
+    } catch(e) { return ''; }
+  })();
+  const isSameWallet = newAddr === currentAddr || newAddr === savedAddr;
 
-  showSaveToast('🔄 Wallet switched — loading save...', '#c9a84c');
+  if (isSameWallet) {
+    // Same wallet reconnecting — wire up storage without resetting state
+    shopState.walletAddress = profile.address;
+    sessionStorage.setItem('arena_wallet', profile.address);
+    if (typeof PveStorage !== 'undefined') PveStorage.install(newAddr);
+    renderWalletDisplay();
+    updateFightButtonWalletGate();
+    return;
+  }
 
-  // Save current wallet's progress before switching
-  if (currentAddr) await saveGame().catch(() => {});
+  // Different wallet — save current progress, then switch
+  showSaveToast('🔄 Wallet switched — saving...', '#c9a84c');
+  await saveGame().catch(() => {});
 
-  // Reset identity
   lbMyKey = null;
-  shopState.walletAddress = profile.address || '';
+  shopState.walletAddress = profile.address;
+  sessionStorage.setItem('arena_wallet', profile.address);
 
-  // Reset in-memory state to defaults before loading new wallet's save
   Object.assign(state.skills,      { stamina:1, attack:1, defense:1, crit:1 });
   Object.assign(state.skillClicks, { stamina:0, attack:0, defense:0, crit:0 });
   state.totalXP = 0; state.lifetimeXP = 0;
@@ -4560,29 +4623,20 @@ PveAuth.onLogin(async (profile) => {
   potionState.miss.owned   = false; potionState.miss.activeThisFight   = false;
   guildState.myGuildCode = null; guildState.myGuildName = null; guildState.isLeader = false;
 
-  // Reset DOM name displays immediately so old wallet's name doesn't persist
   const combatantNameEl = document.querySelector('.combatant-name');
   if (combatantNameEl) combatantNameEl.textContent = 'THE WARRIOR';
   const heroNameInput = document.getElementById('hero-name-input');
   if (heroNameInput) heroNameInput.value = '';
   const nameCostLabel = document.getElementById('name-cost-label');
   if (nameCostLabel) nameCostLabel.textContent = 'Free first name';
-  const waveNumEl = document.getElementById('wave-num');
-  if (waveNumEl) waveNumEl.textContent = '1';
-  const enemyCountEl = document.getElementById('enemy-count');
-  if (enemyCountEl) enemyCountEl.textContent = '0';
-  const fightBtn = document.getElementById('btn-fight');
-  if (fightBtn) fightBtn.textContent = '⚔ ENTER THE ARENA';
-  const playerSprite = document.getElementById('player-sprite');
-  if (playerSprite) playerSprite.textContent = '🧙';
+  document.getElementById('wave-num').textContent    = '1';
+  document.getElementById('enemy-count').textContent = '0';
+  document.getElementById('btn-fight').textContent   = '⚔ ENTER THE ARENA';
+  document.getElementById('player-sprite').textContent = '🧙';
 
-  // Install PveStorage under new wallet address
   if (typeof PveStorage !== 'undefined') PveStorage.install(newAddr);
 
-  // Load new wallet's cloud save
   const loaded = await loadGame().catch(() => false);
-
-  // Re-render everything
   renderSkills();
   resetPlayerStats();
   updateXPDisplay();
@@ -4590,12 +4644,8 @@ PveAuth.onLogin(async (profile) => {
   renderWalletDisplay();
   updateFightButtonWalletGate();
 
-  if (loaded) {
-    showSaveToast('✔ Save loaded for new wallet!', '#27ae60');
-    claimGuildXP();
-  } else {
-    showSaveToast('✔ New wallet connected — fresh start!', '#27ae60');
-  }
+  showSaveToast(loaded ? '✔ Wallet switched — save loaded!' : '✔ New wallet — fresh start!', '#27ae60');
+  if (loaded) claimGuildXP();
 
   const _skinEmoji = SKINS[shopState.equippedSkin]?.emoji || '🧙';
   await PveAuth.saveProfile({ skin: _skinEmoji }).catch(() => {});
