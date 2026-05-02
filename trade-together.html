@@ -884,21 +884,22 @@ var ITEMS = [
   { id:'arrow',  name:'Rune Arrow Bundle',   desc:'Magically tipped arrows of rune', icon:'🏹', price:55,  basePrice:55,  volatility:0, trend:0, history:[], candles:[], candleTickBuf:[] }
 ];
 
-// Randomize volatility, trend, and starting price for all 6 items at startup
+// Fixed global starting prices — identical for all players/sessions
+// Cloud Function initializes these if Firebase state is empty
 (function() {
   var allItems = [
-    { id:'sword', priceMin:150, priceMax:350 },
-    { id:'rune',  priceMin:50,  priceMax:150 },
-    { id:'potion',priceMin:80,  priceMax:250 },
-    { id:'gem',   priceMin:200, priceMax:450 },
-    { id:'hide',  priceMin:80,  priceMax:280 },
-    { id:'arrow', priceMin:20,  priceMax:120 }
+    { id:'sword', price:250 },
+    { id:'rune',  price:100 },
+    { id:'potion',price:165 },
+    { id:'gem',   price:325 },
+    { id:'hide',  price:180 },
+    { id:'arrow', price:70  }
   ];
   allItems.forEach(function(cfg) {
     var item = ITEMS.filter(function(i){ return i.id === cfg.id; })[0];
-    item.price      = Math.round(cfg.priceMin + Math.random() * (cfg.priceMax - cfg.priceMin));
-    item.basePrice  = item.price;
-    item.volatility = Math.round((0.05 + Math.random() * 0.075) * 1.25 * 0.95 * 10000) / 10000;
+    item.price      = cfg.price;
+    item.basePrice  = cfg.price;
+    item.volatility = Math.round((0.05 + Math.random() * 0.075) * 1.25 * 0.95 * 0.95 * 10000) / 10000;
     item.trend      = (Math.random() - 0.5) * 0.0012;
   });
 }());
@@ -2255,165 +2256,58 @@ function renderHistory() {
 // ── MARKET ENGINE: FIREBASE AS SINGLE SOURCE OF TRUTH ───────────────────────
 //
 // HOW IT WORKS:
-//   One tab becomes "primary" — it runs Math.random() and writes prices to Firebase.
-//   All other tabs (including the primary) read prices FROM Firebase every tick.
-//   Late joiners get the full current state on first read.
-//   If primary goes away, next tab to check claims the role.
+//   Prices are driven exclusively by the Cloud Function price engine (priceEngine).
+//   All clients are pure readers — they poll Firebase every 500ms and apply state.
+//   No client ever writes prices. No primary election needed.
 //
-var MARKET_KEY        = 'trade/mkt';   // namespaced under trade/ to share one Firebase DB
-var _primaryInterval  = null;
-var _readerInterval   = null;
-var _renewInterval    = null;
-var _isPrimary        = false;
-var _primaryClaimed   = false;
+var MARKET_KEY       = 'trade/mkt';
+var _readerInterval  = null;
+var _lastAppliedTick = -1;
+var _engineAlive     = false;
 
 // ── Entry point called from enterGame() ──────────────────────────────────────
 function startMarketEngine() {
-  claimPrimary();
-}
-
-// ── Primary election ─────────────────────────────────────────────────────────
-async function claimPrimary() {
-  if (_primaryClaimed) return;
-  _primaryClaimed = true; // Lock immediately to prevent double-entry
-  try {
-    var slot = await fbGet(MARKET_KEY + '/primary');
-    var now  = Date.now();
-    var stale = !slot || !slot.ts || (now - slot.ts) > 7000;
-    if (stale) {
-      // Slot is free — claim it and become primary
-      await fbSet(MARKET_KEY + '/primary', { who: myUsername, ts: now });
-      becomePrimary();
-      return;
-    }
-    // Someone else is primary — become reader
-    _primaryClaimed = false; // Allow re-election later
-    becomeReader();
-  } catch(e) {
-    // Firebase unreachable — become primary locally so ticks run
-    becomePrimary();
-  }
-}
-
-function becomePrimary() {
-  _isPrimary = true;
-  _primaryClaimed = true;
-  console.log('[Market] Primary — running price engine');
-  if (_renewInterval) clearInterval(_renewInterval);
-  _renewInterval = setInterval(function() {
-    fbSet(MARKET_KEY + '/primary', { who: myUsername, ts: Date.now() });
-  }, 4000);
-  if (_primaryInterval) clearInterval(_primaryInterval);
-  _primaryInterval = setInterval(primaryTick, TICK_MS);
-  // Fire immediately so UI updates without waiting 2s
-  primaryTick();
-  // No reader interval needed — primaryTick updates UI directly
-  if (_readerInterval) { clearInterval(_readerInterval); _readerInterval = null; }
-}
-
-function becomeReader() {
-  _isPrimary = false;
-  _primaryClaimed = false;
-  console.log('[Market] Reader mode — syncing from Firebase');
-  if (_primaryInterval) { clearInterval(_primaryInterval); _primaryInterval = null; }
-  if (_readerInterval) clearInterval(_readerInterval);
-  // Poll every 500ms so readers stay tightly in sync with primary writes
+  console.log('[Market] Cloud Function mode — pure reader');
+  readPrices();
   _readerInterval = setInterval(readPrices, 500);
-  readPrices(); // immediate first read
-  // Check if primary has gone stale every 6s
-  if (_renewInterval) clearInterval(_renewInterval);
-  _renewInterval = setInterval(function() {
-    fbGet(MARKET_KEY + '/primary').then(function(slot) {
-      if (!slot || !slot.ts || (Date.now() - slot.ts) > 7000) {
-        console.log('[Market] Primary gone — taking over');
-        if (_readerInterval) { clearInterval(_readerInterval); _readerInterval = null; }
-        if (_renewInterval) { clearInterval(_renewInterval); _renewInterval = null; }
-        _primaryClaimed = false;
-        claimPrimary();
-      }
-    }).catch(function(){});
-  }, 6000);
+  // Check engine heartbeat every 10s and warn if stale
+  setInterval(checkEngineHeartbeat, 10000);
 }
 
-// ── Primary: compute prices and write to Firebase ────────────────────────────
-async function primaryTick() {
-  tickCount++;
-  if (tickCount >= nextShiftAt) shiftTrends();
-  maybeFireEvent();
-  applyEventPrices();
-
-  var items = {};
-  ITEMS.forEach(function(item) {
-    lastPrices[item.id] = item.price;
-    var chg = item.price * ((Math.random() - 0.48) * item.volatility + item.trend);
-    item.price = Math.max(5, Math.round((item.price + chg) * 100) / 100);
-    item.history.push(item.price);
-    if (item.history.length > MAX_HISTORY) item.history.shift();
-    item.candleTickBuf.push(item.price);
-    if (item.candles.length === 0 || item.candleTickBuf.length === 1) {
-      var prev = item.candles.length ? item.candles[item.candles.length-1].c : item.price;
-      item.candles.push({ o: prev, h: item.price, l: item.price, c: item.price });
+// ── Heartbeat check — warn player if Cloud Function has stopped ───────────────
+async function checkEngineHeartbeat() {
+  try {
+    var eng = await fbGet(MARKET_KEY + '/engine');
+    if (eng && eng.ts && (Date.now() - eng.ts) < 90000) {
+      _engineAlive = true;
+      var lbl = document.getElementById('tick-label');
+      if (lbl && lbl.textContent.indexOf('⚠️') !== -1) lbl.textContent = 'Live';
     } else {
-      var cur = item.candles[item.candles.length-1];
-      cur.h = Math.max(cur.h, item.price);
-      cur.l = Math.min(cur.l, item.price);
-      cur.c = item.price;
+      _engineAlive = false;
+      var lbl = document.getElementById('tick-label');
+      if (lbl) lbl.textContent = '⚠️ Engine offline';
+      console.warn('[Market] Cloud Function heartbeat stale — prices paused');
     }
-    if (item.candleTickBuf.length >= CANDLE_TICKS) {
-      item.candleTickBuf = [];
-      if (item.candles.length > 60) item.candles.shift();
-    }
-    items[item.id] = {
-      price:      item.price,
-      trend:      item.trend,
-      volatility: item.volatility,
-      history:    item.history.slice(-MAX_HISTORY),
-      candles:    item.candles.slice(-60)
-    };
-  });
-
-  // ── Update UI immediately (don't wait for Firebase round-trip) ──
-  var dot = document.getElementById('tick-dot');
-  if (dot) { dot.style.background = '#f0c040'; setTimeout(function(){ dot.style.background = 'var(--green)'; }, 300); }
-  var lbl = document.getElementById('tick-label');
-  if (lbl) lbl.textContent = 'Tick #' + tickCount;
-  checkSLTP();
-  checkPriceCeiling();
-  renderAll();
-
-  // ── Broadcast to Firebase in background (fire-and-forget) ──
-  fbSet(MARKET_KEY + '/state', {
-    tickCount:         tickCount,
-    nextShiftAt:       nextShiftAt,
-    sessionBoundaries: sessionBoundaries.slice(-60),
-    items:             items,
-    ts:                Date.now()
-  }).catch(function(e){ console.warn('Firebase write failed:', e); });
+  } catch(e) {}
 }
 
-// ── Reader (and primary): apply Firebase state to local ITEMS ────────────────
-var _lastAppliedTick = -1;
-
+// ── Poll Firebase for latest price state ─────────────────────────────────────
 async function readPrices() {
   try {
     var state = await fbGet(MARKET_KEY + '/state');
     if (!state || !state.items) return;
-    // Only apply if this is newer than what we already have
     if (state.tickCount <= _lastAppliedTick) return;
     _lastAppliedTick = state.tickCount;
     applyStateLocally(state);
-  } catch(e) { /* keep last state */ }
+  } catch(e) { /* keep last known state */ }
 }
 
+// ── Apply Firebase state to local ITEMS and update UI ────────────────────────
 function applyStateLocally(state) {
-  // Sync tick
-  if (state.tickCount > tickCount) {
-    tickCount = state.tickCount;
-  }
-  if (state.nextShiftAt) nextShiftAt = state.nextShiftAt;
+  if (state.tickCount > tickCount) tickCount = state.tickCount;
+  if (state.nextShiftAt)       nextShiftAt       = state.nextShiftAt;
   if (state.sessionBoundaries) sessionBoundaries = state.sessionBoundaries;
 
-  // Apply prices
   ITEMS.forEach(function(item) {
     var d = state.items && state.items[item.id];
     if (!d) return;
@@ -2422,13 +2316,9 @@ function applyStateLocally(state) {
     item.trend      = d.trend;
     item.volatility = d.volatility;
     if (d.history && d.history.length) item.history = d.history;
-    if (d.candles && d.candles.length) {
-      item.candles = d.candles;
-      item.candleTickBuf = [];
-    }
+    if (d.candles && d.candles.length) { item.candles = d.candles; item.candleTickBuf = []; }
   });
 
-  // Update UI
   var dot = document.getElementById('tick-dot');
   if (dot) { dot.style.background = '#f0c040'; setTimeout(function(){ dot.style.background = 'var(--green)'; }, 300); }
   var lbl = document.getElementById('tick-label');
@@ -2438,7 +2328,7 @@ function applyStateLocally(state) {
   renderAll();
 }
 
-// ── TICK (legacy no-op) ───────────────────────────────────────────────────────
+// ── TICK (no-op — engine lives in Cloud Function) ────────────────────────────
 function tick(){}
 
 // ── PAGE ──────────────────────────────────────────────────────────────────────
