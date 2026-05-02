@@ -469,6 +469,32 @@
     box-shadow: 0 0 28px rgba(41,182,246,0.18), 0 4px 16px rgba(0,0,0,0.4);
   }
 
+  /* ── Privacy Policy Button ── */
+  .privacy-footer {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 20px;
+    background: rgba(200,169,110,0.04);
+    border: 1px solid rgba(200,169,110,0.14);
+    border-radius: 999px;
+    color: rgba(200,169,110,0.55);
+    font-family: 'DM Mono', monospace;
+    font-size: 0.72rem;
+    letter-spacing: 0.04em;
+    text-decoration: none;
+    transition: all 0.25s ease;
+    margin-top: 8px;
+    box-shadow: 0 0 18px rgba(200,169,110,0.03);
+  }
+  .privacy-footer:hover {
+    background: rgba(200,169,110,0.09);
+    border-color: rgba(200,169,110,0.32);
+    color: rgba(200,169,110,0.9);
+    transform: translateY(-2px);
+    box-shadow: 0 0 28px rgba(200,169,110,0.14), 0 4px 16px rgba(0,0,0,0.4);
+  }
+
   /* Social buttons wrapper */
   .social-btns { display: flex; flex-direction: column; align-items: center; gap: 12px; margin-top: 4px; }
 
@@ -1859,6 +1885,10 @@ const WORKER_URL = 'https://pve-api.YOUR-WORKER-SUBDOMAIN.workers.dev';
     <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.894 8.221-1.97 9.28c-.145.658-.537.818-1.084.508l-3-2.21-1.447 1.394c-.16.16-.295.295-.605.295l.213-3.053 5.56-5.023c.242-.213-.054-.333-.373-.12L7.88 13.617l-2.96-.924c-.643-.204-.657-.643.136-.953l11.57-4.461c.537-.194 1.006.131.834.942z"/></svg>
     Join <strong>PvE on Optimism</strong> on Telegram
   </a>
+  <a href="privacy.html" class="privacy-footer">
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+    Privacy Policy
+  </a>
 </div>
 
 <div class="divider"></div>
@@ -1895,6 +1925,10 @@ const WORKER_URL = 'https://pve-api.YOUR-WORKER-SUBDOMAIN.workers.dev';
     <a href="https://t.me/PvE_On_Optimism" target="_blank" rel="noopener" class="tg-follow-footer">
       <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.894 8.221-1.97 9.28c-.145.658-.537.818-1.084.508l-3-2.21-1.447 1.394c-.16.16-.295.295-.605.295l.213-3.053 5.56-5.023c.242-.213-.054-.333-.373-.12L7.88 13.617l-2.96-.924c-.643-.204-.657-.643.136-.953l11.57-4.461c.537-.194 1.006.131.834.942z"/></svg>
       Join <strong>PvE on Optimism</strong> on Telegram
+    </a>
+    <a href="privacy.html" class="privacy-footer">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+      Privacy Policy
     </a>
   </div>
 </footer>
